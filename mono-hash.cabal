@@ -10,7 +10,7 @@ build-type: Simple
 extra-doc-files: CHANGELOG.md
 description: Hashing for monomorphic containers
 tested-with:
-  ghc ==8.10.7 || ==9.0.2 || ==9.2.8 || ==9.4.8 || ==9.6.6 || ==9.8.4 || ==9.10.1 || ==9.12.1
+  ghc ==9.0.2 || ==9.2.8 || ==9.4.8 || ==9.6.6 || ==9.8.4 || ==9.10.1 || ==9.12.1
 
 common warnings
   ghc-options: -Wall
@@ -27,7 +27,7 @@ library
   
   build-depends:
     base >=4.14.3.0 && <5,
-    containers >=0.6.5.1,
+    containers >=0.6.4.1 && <0.9,
     mono-traversable ^>=1.0.21.0,
     strict-identity ^>=0.1.0.0,
     wide-word ^>=0.1.7.0
