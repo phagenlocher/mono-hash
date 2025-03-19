@@ -2,7 +2,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE NoFieldSelectors #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 module Data.Hash.Mono.SipHash where
 
