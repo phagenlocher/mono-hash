@@ -8,6 +8,9 @@ maintainer: me@philipphagenlocher.de
 category: Data
 build-type: Simple
 extra-doc-files: CHANGELOG.md
+description: Hashing for monomorphic containers
+tested-with:
+  ghc ==8.10.7 || ==9.0.2 || ==9.2.8 || ==9.4.8 || ==9.6.6 || ==9.8.4 || ==9.10.1 || ==9.12.1
 
 common warnings
   ghc-options: -Wall
@@ -23,11 +26,11 @@ library
     Data.Hash.Mono.Internal
   
   build-depends:
-    base ^>=4.17.2.1,
-    containers,
-    mono-traversable,
-    strict-identity,
-    wide-word,
+    base >=4.14.3.0 && <5,
+    containers >=0.6.4.1 && <0.9,
+    mono-traversable ^>=1.0.21.0,
+    strict-identity ^>=0.1.0.0,
+    wide-word ^>=0.1.7.0
 
   hs-source-dirs: src
 
@@ -56,7 +59,7 @@ test-suite mono-hash-test
   main-is: Main.hs
 
   build-depends:
-    base ^>=4.17.2.1,
+    base >=4.14.3.0 && <5,
     bytestring,
     mono-hash,
     tasty,
@@ -74,7 +77,7 @@ benchmark mono-hash-bench
   main-is: Main.hs
 
   build-depends:
-    base >=4 && <5,
+    base >=4.14.3.0 && <5,
     criterion,
     deepseq,
     mono-hash,
