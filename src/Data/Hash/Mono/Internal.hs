@@ -3,6 +3,10 @@
 module Data.Hash.Mono.Internal
   ( ToWords (..),
     word64ToLE,
+    word32ToLE,
+    mkWord16,
+    mkWord32,
+    mkWord64,
   )
 where
 
@@ -146,3 +150,27 @@ word64ToLE w =
         + (c6 `shiftL` 48)
         + (c7 `shiftL` 56)
 {-# INLINEABLE word64ToLE #-}
+
+word32ToLE :: Word32 -> Word32
+word32ToLE w =
+  let c0 = (w `shiftR` 24) .&. 0xff
+      c1 = (w `shiftR` 16) .&. 0xff
+      c2 = (w `shiftR` 8) .&. 0xff
+      c3 = w .&. 0xff
+   in c0
+        + (c1 `shiftL` 8)
+        + (c2 `shiftL` 16)
+        + (c3 `shiftL` 24)
+{-# INLINEABLE word32ToLE #-}
+
+mkWord16 :: Word8 -> Word8 -> Word16
+mkWord16 hi lo = (fromIntegral hi `shiftL` 8) + fromIntegral lo
+{-# INLINE mkWord16 #-}
+
+mkWord32 :: Word16 -> Word16 -> Word32
+mkWord32 hi lo = (fromIntegral hi `shiftL` 16) + fromIntegral lo
+{-# INLINE mkWord32 #-}
+
+mkWord64 :: Word32 -> Word32 -> Word64
+mkWord64 hi lo = (fromIntegral hi `shiftL` 32) + fromIntegral lo
+{-# INLINE mkWord64 #-}
