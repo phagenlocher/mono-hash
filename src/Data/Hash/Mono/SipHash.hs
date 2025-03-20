@@ -4,7 +4,12 @@
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
-module Data.Hash.Mono.SipHash where
+module Data.Hash.Mono.SipHash
+  ( SipHashData,
+    SipHashResult,
+    sipHash,
+  )
+where
 
 import Control.Monad.StrictIdentity (runStrictIdentity)
 import Data.Bits (Bits (rotateL, xor))

@@ -4,7 +4,12 @@
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
-module Data.Hash.Mono.HalfSipHash where
+module Data.Hash.Mono.HalfSipHash
+  ( HalfSipHashData,
+    HalfSipHashResult,
+    halfSipHash,
+  )
+where
 
 import Control.Monad.StrictIdentity (runStrictIdentity)
 import Data.Bits (Bits (rotateL, shiftR, xor, (.&.)))
