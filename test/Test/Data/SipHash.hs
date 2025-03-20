@@ -1,4 +1,4 @@
-module SipHash.TestData where
+module Test.Data.SipHash where
 
 import Data.Char (chr)
 import Data.String (IsString, fromString)
