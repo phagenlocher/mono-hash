@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module FNV.TestData where
+module Test.Data.FNV where
 
 import Data.String (IsString)
 import Data.Word (Word32, Word64)

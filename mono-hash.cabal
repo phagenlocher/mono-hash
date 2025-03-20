@@ -21,6 +21,7 @@ library
   exposed-modules:
     Data.Hash.Mono.FNV
     Data.Hash.Mono.SipHash
+    Data.Hash.Mono.HalfSipHash
   
   other-modules:
     Data.Hash.Mono.Internal
@@ -49,8 +50,9 @@ test-suite mono-hash-test
   default-language: Haskell2010
 
   other-modules: 
-    FNV.TestData
-    SipHash.TestData
+    Test.Data.FNV
+    Test.Data.SipHash
+    Test.Data.HalfSipHash
 
   type: exitcode-stdio-1.0
 

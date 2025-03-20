@@ -4,16 +4,27 @@
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
-module Data.Hash.Mono.SipHash where
+module Data.Hash.Mono.SipHash
+  ( SipHashData,
+    SipHashResult,
+    sipHash,
+  )
+where
 
 import Control.Monad.StrictIdentity (runStrictIdentity)
-import Data.Bits (Bits (rotateL, shiftL, xor))
+import Data.Bits (Bits (rotateL, xor))
 import Data.Foldable qualified as Foldable
-import Data.Hash.Mono.Internal (ToWords (..), word64ToLE)
+import Data.Hash.Mono.Internal
+  ( ToWords (..),
+    mkWord16,
+    mkWord32,
+    mkWord64,
+    word64ToLE,
+  )
 import Data.MonoTraversable (Element, MonoFoldable (ofoldl'))
 import Data.Sequence qualified as Seq
 import Data.WideWord.Word128 (Word128 (..))
-import Data.Word (Word16, Word32, Word64, Word8)
+import Data.Word (Word64, Word8)
 import Numeric (showHex)
 
 class SipHashResult a where
@@ -149,17 +160,5 @@ chunkSipHashData = chunkWords . collectWords
 
     mkWord :: Word8 -> Word8 -> Word8 -> Word8 -> Word8 -> Word8 -> Word8 -> Word8 -> Word64
     mkWord !c0 !c1 !c2 !c3 !c4 !c5 !c6 !c7 =
-      mk64 (mk32 (mk16 c0 c1) (mk16 c2 c3)) (mk32 (mk16 c4 c5) (mk16 c6 c7))
-      where
-        mk16 :: Word8 -> Word8 -> Word16
-        mk16 hi lo = (fromIntegral hi `shiftL` 8) + fromIntegral lo
-        {-# INLINE mk16 #-}
-
-        mk32 :: Word16 -> Word16 -> Word32
-        mk32 hi lo = (fromIntegral hi `shiftL` 16) + fromIntegral lo
-        {-# INLINE mk32 #-}
-
-        mk64 :: Word32 -> Word32 -> Word64
-        mk64 hi lo = (fromIntegral hi `shiftL` 32) + fromIntegral lo
-        {-# INLINE mk64 #-}
+      mkWord64 (mkWord32 (mkWord16 c0 c1) (mkWord16 c2 c3)) (mkWord32 (mkWord16 c4 c5) (mkWord16 c6 c7))
     {-# INLINE mkWord #-}

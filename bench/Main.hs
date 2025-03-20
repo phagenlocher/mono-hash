@@ -8,6 +8,7 @@ import Control.Exception (evaluate)
 import Criterion (Benchmark, bench, bgroup, whnf)
 import Criterion.Main (defaultMain)
 import Data.Hash.Mono.FNV (fnv1, fnv1a)
+import Data.Hash.Mono.HalfSipHash (halfSipHash)
 import Data.Hash.Mono.SipHash (sipHash)
 import Data.WideWord.Word128 (Word128)
 import Data.WideWord.Word256 (Word256)
@@ -42,5 +43,7 @@ main = do
       bgroup "FNV1 Word256" $ mkBench (fnv1 @Word256),
       bgroup "FNV1a Word256" $ mkBench (fnv1a @Word256),
       bgroup "SipHash-2-4 Word64" $ mkBench (sipHash @Word64 2 4 0xc0ffee),
-      bgroup "SipHash-2-4 Word128" $ mkBench (sipHash @Word128 2 4 0xc0ffee)
+      bgroup "SipHash-2-4 Word128" $ mkBench (sipHash @Word128 2 4 0xc0ffee),
+      bgroup "HalfSipHash-2-4 Word32" $ mkBench (halfSipHash @Word32 2 4 0xc0ffee),
+      bgroup "HalfSipHash-2-4 Word64" $ mkBench (halfSipHash @Word64 2 4 0xc0ffee)
     ]
