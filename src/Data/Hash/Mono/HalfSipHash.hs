@@ -11,7 +11,6 @@ module Data.Hash.Mono.HalfSipHash
   )
 where
 
-import Control.Monad.StrictIdentity (runStrictIdentity)
 import Data.Bits (Bits (rotateL, shiftR, xor, (.&.)))
 import Data.Foldable qualified as Foldable
 import Data.Hash.Mono.Internal
@@ -36,10 +35,9 @@ instance HalfSipHashResult Word32 where
 
   finalization :: Word -> HalfSipData -> Word32
   finalization d (HalfSipData !v0 !v1 !v2 !v3) =
-    runStrictIdentity $! do
-      v2' <- pure $! v2 `xor` 0xff
-      let (HalfSipData !_ v1' _ !v3') = halfSipRoundN d (HalfSipData v0 v1 v2' v3)
-      pure $! word32ToLE $ v1' `xor` v3'
+    let v2' = v2 `xor` 0xff
+        (HalfSipData !_ v1' _ !v3') = halfSipRoundN d (HalfSipData v0 v1 v2' v3)
+     in word32ToLE $ v1' `xor` v3'
 
 instance HalfSipHashResult Word64 where
   initialize :: HalfSipData -> HalfSipData
@@ -47,14 +45,13 @@ instance HalfSipHashResult Word64 where
 
   finalization :: Word -> HalfSipData -> Word64
   finalization d (HalfSipData !v0 !v1 !v2 !v3) =
-    runStrictIdentity $! do
-      v2' <- pure $! v2 `xor` 0xee
-      let (HalfSipData !v0' !v1' !v2'' !v3') = halfSipRoundN d (HalfSipData v0 v1 v2' v3)
-      hi <- pure $! word32ToLE $ v1' `xor` v3'
-      v1'' <- pure $! v1' `xor` 0xdd
-      let (HalfSipData _ !v1''' _ !v3'') = halfSipRoundN d (HalfSipData v0' v1'' v2'' v3')
-      lo <- pure $! word32ToLE $ v1''' `xor` v3''
-      pure $! mkWord64 hi lo
+    let v2' = v2 `xor` 0xee
+        (HalfSipData !v0' !v1' !v2'' !v3') = halfSipRoundN d (HalfSipData v0 v1 v2' v3)
+        hi = word32ToLE $ v1' `xor` v3'
+        v1'' = v1' `xor` 0xdd
+        (HalfSipData _ !v1''' _ !v3'') = halfSipRoundN d (HalfSipData v0' v1'' v2'' v3')
+        lo = word32ToLE $ v1''' `xor` v3''
+     in mkWord64 hi lo
 
 type HalfSipHashData a = (MonoFoldable a, ToWords (Element a))
 
@@ -84,11 +81,10 @@ halfSipHash c d key = finalization d . Foldable.foldl' compression (initialize @
   where
     compression :: HalfSipData -> Word32 -> HalfSipData
     compression (HalfSipData !v0 !v1 !v2 !v3) m =
-      runStrictIdentity $! do
-        v3' <- pure $! v3 `xor` m
-        let (HalfSipData !v0' !v1' !v2' !v3'') = halfSipRoundN c (HalfSipData v0 v1 v2 v3')
-        v0'' <- pure $! v0' `xor` m
-        pure $! HalfSipData v0'' v1' v2' v3''
+      let v3' = v3 `xor` m
+          (HalfSipData !v0' !v1' !v2' !v3'') = halfSipRoundN c (HalfSipData v0 v1 v2 v3')
+          v0'' = v0' `xor` m
+       in HalfSipData v0'' v1' v2' v3''
 
     initData :: HalfSipData
     initData =
@@ -107,22 +103,21 @@ halfSipHash c d key = finalization d . Foldable.foldl' compression (initialize @
 
 halfSipRound :: HalfSipData -> HalfSipData
 halfSipRound (HalfSipData !v0 !v1 !v2 !v3) =
-  runStrictIdentity $! do
-    v0' <- pure $! v0 + v1
-    v1' <- pure $! v1 `rotateL` 5
-    v1'' <- pure $! v1' `xor` v0'
-    v0'' <- pure $! v0' `rotateL` 16
-    v2' <- pure $! v2 + v3
-    v3' <- pure $! v3 `rotateL` 8
-    v3'' <- pure $! v3' `xor` v2'
-    v0''' <- pure $! v0'' + v3''
-    v3''' <- pure $! v3'' `rotateL` 7
-    v3'''' <- pure $! v3''' `xor` v0'''
-    v2'' <- pure $! v2' + v1''
-    v1''' <- pure $! v1'' `rotateL` 13
-    v1'''' <- pure $! v1''' `xor` v2''
-    v2''' <- pure $! v2'' `rotateL` 16
-    pure $! HalfSipData v0''' v1'''' v2''' v3''''
+  let v0' = v0 + v1
+      v1' = v1 `rotateL` 5
+      v1'' = v1' `xor` v0'
+      v0'' = v0' `rotateL` 16
+      v2' = v2 + v3
+      v3' = v3 `rotateL` 8
+      v3'' = v3' `xor` v2'
+      v0''' = v0'' + v3''
+      v3''' = v3'' `rotateL` 7
+      v3'''' = v3''' `xor` v0'''
+      v2'' = v2' + v1''
+      v1''' = v1'' `rotateL` 13
+      v1'''' = v1''' `xor` v2''
+      v2''' = v2'' `rotateL` 16
+   in HalfSipData v0''' v1'''' v2''' v3''''
 
 halfSipRoundN :: Word -> HalfSipData -> HalfSipData
 halfSipRoundN n !x

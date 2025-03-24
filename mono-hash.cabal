@@ -30,7 +30,6 @@ library
     base >=4.14.3.0 && <5,
     containers >=0.6.4.1 && <0.9,
     mono-traversable ^>=1.0.21.0,
-    strict-identity ^>=0.1.0.0,
     wide-word ^>=0.1.7.0
 
   hs-source-dirs: src

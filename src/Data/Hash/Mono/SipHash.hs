@@ -11,7 +11,6 @@ module Data.Hash.Mono.SipHash
   )
 where
 
-import Control.Monad.StrictIdentity (runStrictIdentity)
 import Data.Bits (Bits (rotateL, xor))
 import Data.Foldable qualified as Foldable
 import Data.Hash.Mono.Internal
@@ -37,10 +36,9 @@ instance SipHashResult Word64 where
 
   finalization :: Word -> SipData -> Word64
   finalization d (SipData !v0 !v1 !v2 !v3) =
-    runStrictIdentity $! do
-      v2' <- pure $! v2 `xor` 0xff
-      let (SipData !v0' !v1' !v2'' !v3') = sipRoundN d (SipData v0 v1 v2' v3)
-      pure $! word64ToLE $ v0' `xor` v1' `xor` v2'' `xor` v3'
+    let v2' = v2 `xor` 0xff
+        (SipData !v0' !v1' !v2'' !v3') = sipRoundN d (SipData v0 v1 v2' v3)
+     in word64ToLE $ v0' `xor` v1' `xor` v2'' `xor` v3'
 
 instance SipHashResult Word128 where
   initialize :: SipData -> SipData
@@ -48,14 +46,13 @@ instance SipHashResult Word128 where
 
   finalization :: Word -> SipData -> Word128
   finalization d (SipData !v0 !v1 !v2 !v3) =
-    runStrictIdentity $! do
-      v2' <- pure $! v2 `xor` 0xee
-      let (SipData !v0' !v1' !v2'' !v3') = sipRoundN d (SipData v0 v1 v2' v3)
-      hi <- pure $! word64ToLE $ v0' `xor` v1' `xor` v2'' `xor` v3'
-      v1'' <- pure $! v1' `xor` 0xdd
-      let (SipData !v0'' !v1''' !v2''' !v3'') = sipRoundN d (SipData v0' v1'' v2'' v3')
-      lo <- pure $! word64ToLE $ v0'' `xor` v1''' `xor` v2''' `xor` v3''
-      pure $! Word128 hi lo
+    let v2' = v2 `xor` 0xee
+        (SipData !v0' !v1' !v2'' !v3') = sipRoundN d (SipData v0 v1 v2' v3)
+        hi = word64ToLE $ v0' `xor` v1' `xor` v2'' `xor` v3'
+        v1'' = v1' `xor` 0xdd
+        (SipData !v0'' !v1''' !v2''' !v3'') = sipRoundN d (SipData v0' v1'' v2'' v3')
+        lo = word64ToLE $ v0'' `xor` v1''' `xor` v2''' `xor` v3''
+     in Word128 hi lo
 
 type SipHashData a = (MonoFoldable a, ToWords (Element a))
 
@@ -84,11 +81,10 @@ sipHash c d key = finalization d . Foldable.foldl' compression (initialize @resu
   where
     compression :: SipData -> Word64 -> SipData
     compression (SipData !v0 !v1 !v2 !v3) m =
-      runStrictIdentity $! do
-        v3' <- pure $! v3 `xor` m
-        let (SipData !v0' !v1' !v2' !v3'') = sipRoundN c (SipData v0 v1 v2 v3')
-        v0'' <- pure $! v0' `xor` m
-        pure $! SipData v0'' v1' v2' v3''
+      let v3' = v3 `xor` m
+          (SipData !v0' !v1' !v2' !v3'') = sipRoundN c (SipData v0 v1 v2 v3')
+          v0'' = v0' `xor` m
+       in SipData v0'' v1' v2' v3''
 
     initData :: SipData
     initData =
@@ -107,22 +103,21 @@ sipHash c d key = finalization d . Foldable.foldl' compression (initialize @resu
 
 sipRound :: SipData -> SipData
 sipRound (SipData !v0 !v1 !v2 !v3) =
-  runStrictIdentity $! do
-    v0' <- pure $! v0 + v1
-    v1' <- pure $! v1 `rotateL` 13
-    v1'' <- pure $! v1' `xor` v0'
-    v0'' <- pure $! v0' `rotateL` 32
-    v2' <- pure $! v2 + v3
-    v3' <- pure $! v3 `rotateL` 16
-    v3'' <- pure $! v3' `xor` v2'
-    v0''' <- pure $! v0'' + v3''
-    v3''' <- pure $! v3'' `rotateL` 21
-    v3'''' <- pure $! v3''' `xor` v0'''
-    v2'' <- pure $! v2' + v1''
-    v1''' <- pure $! v1'' `rotateL` 17
-    v1'''' <- pure $! v1''' `xor` v2''
-    v2''' <- pure $! v2'' `rotateL` 32
-    pure $! SipData v0''' v1'''' v2''' v3''''
+  let v0' = v0 + v1
+      v1' = v1 `rotateL` 13
+      v1'' = v1' `xor` v0'
+      v0'' = v0' `rotateL` 32
+      v2' = v2 + v3
+      v3' = v3 `rotateL` 16
+      v3'' = v3' `xor` v2'
+      v0''' = v0'' + v3''
+      v3''' = v3'' `rotateL` 21
+      v3'''' = v3''' `xor` v0'''
+      v2'' = v2' + v1''
+      v1''' = v1'' `rotateL` 17
+      v1'''' = v1''' `xor` v2''
+      v2''' = v2'' `rotateL` 32
+   in SipData v0''' v1'''' v2''' v3''''
 
 sipRoundN :: Word -> SipData -> SipData
 sipRoundN n !x
