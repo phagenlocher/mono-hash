@@ -2,8 +2,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-
 module Data.Hash.Mono.HalfSipHash
   ( HalfSipHashData,
     HalfSipHashResult,
@@ -56,10 +54,10 @@ instance HalfSipHashResult Word64 where
 type HalfSipHashData a = (MonoFoldable a, ToWords (Element a))
 
 data HalfSipData = HalfSipData
-  { v0 :: {-# UNPACK #-} !Word32,
-    v1 :: {-# UNPACK #-} !Word32,
-    v2 :: {-# UNPACK #-} !Word32,
-    v3 :: {-# UNPACK #-} !Word32
+  { hv0 :: {-# UNPACK #-} !Word32,
+    hv1 :: {-# UNPACK #-} !Word32,
+    hv2 :: {-# UNPACK #-} !Word32,
+    hv3 :: {-# UNPACK #-} !Word32
   }
 
 instance Show HalfSipData where
@@ -89,10 +87,10 @@ halfSipHash c d key = finalization d . Foldable.foldl' compression (initialize @
     initData :: HalfSipData
     initData =
       HalfSipData
-        { v0 = k0,
-          v1 = k1,
-          v2 = k0 `xor` 0x6c796765,
-          v3 = k1 `xor` 0x74656462
+        { hv0 = k0,
+          hv1 = k1,
+          hv2 = k0 `xor` 0x6c796765,
+          hv3 = k1 `xor` 0x74656462
         }
       where
         k0 :: Word32

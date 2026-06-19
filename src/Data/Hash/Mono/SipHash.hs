@@ -2,8 +2,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
-
 module Data.Hash.Mono.SipHash
   ( SipHashData,
     SipHashResult,
@@ -57,10 +55,10 @@ instance SipHashResult Word128 where
 type SipHashData a = (MonoFoldable a, ToWords (Element a))
 
 data SipData = SipData
-  { v0 :: {-# UNPACK #-} !Word64,
-    v1 :: {-# UNPACK #-} !Word64,
-    v2 :: {-# UNPACK #-} !Word64,
-    v3 :: {-# UNPACK #-} !Word64
+  { sv0 :: {-# UNPACK #-} !Word64,
+    sv1 :: {-# UNPACK #-} !Word64,
+    sv2 :: {-# UNPACK #-} !Word64,
+    sv3 :: {-# UNPACK #-} !Word64
   }
 
 instance Show SipData where
@@ -89,10 +87,10 @@ sipHash c d key = finalization d . Foldable.foldl' compression (initialize @resu
     initData :: SipData
     initData =
       SipData
-        { v0 = k0 `xor` 0x736f6d6570736575,
-          v1 = k1 `xor` 0x646f72616e646f6d,
-          v2 = k0 `xor` 0x6c7967656e657261,
-          v3 = k1 `xor` 0x7465646279746573
+        { sv0 = k0 `xor` 0x736f6d6570736575,
+          sv1 = k1 `xor` 0x646f72616e646f6d,
+          sv2 = k0 `xor` 0x6c7967656e657261,
+          sv3 = k1 `xor` 0x7465646279746573
         }
       where
         k0 :: Word64
