@@ -23,6 +23,8 @@ import Test.Tasty.HUnit (testCase, (@?=))
 main :: IO ()
 main = defaultMain tests
 
+-- | A string containing ASCII, one-byte non-ASCII, and multi-byte code
+-- points.  The library hashes the code point's big-endian bytes.
 charEncodingInput :: String
 charEncodingInput = "\x00\x7f\x80\xff\x100\x1234\x1F600"
 

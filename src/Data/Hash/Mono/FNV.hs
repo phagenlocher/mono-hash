@@ -1,5 +1,9 @@
 {-# LANGUAGE BangPatterns #-}
 
+-- | FNV-1 and FNV-1a hashes for any 'MonoFoldable' container.
+--
+-- The output width is chosen by the type application; see 'fnv1' and
+-- 'fnv1a'.
 module Data.Hash.Mono.FNV
   ( FNVData,
     FNVResult,
@@ -15,9 +19,12 @@ import Data.WideWord.Word128 (Word128)
 import Data.WideWord.Word256 (Word256)
 import Data.Word (Word32, Word64, Word8)
 
+-- | Offset basis and prime for a particular FNV output width.
 class HasFNVBasis a where
+  -- | The FNV offset basis for this output width.
   fnvOffsetBasis :: a
 
+  -- | The FNV prime for this output width.
   fnvPrime :: a
 
 instance HasFNVBasis Word32 where
@@ -48,14 +55,28 @@ instance HasFNVBasis Word256 where
   fnvPrime :: Word256
   fnvPrime = 374144419156711147060143317175368453031918731002211
 
+-- | Constraint for types that can be used as an FNV result.
+--
+-- Instances are provided for 'Word32', 'Word64', 'Word128', and 'Word256'.
 type FNVResult a = (HasFNVBasis a, Bits a, Num a)
 
+-- | Constraint for containers that can be hashed with FNV.
+--
+-- The container's element type must have a ToWords instance.
 type FNVData a = (MonoFoldable a, ToWords (Element a))
 
+-- | Shared implementation of 'fnv1' and 'fnv1a'.
 fnvGeneric :: forall result mono. (FNVData mono, FNVResult result) => (result -> Word8 -> result) -> mono -> result
 fnvGeneric fnvRound = ofoldl' (foldlWords fnvRound) fnvOffsetBasis
 {-# INLINE fnvGeneric #-}
 
+-- | FNV-1 hash of a monomorphic container.
+--
+-- The result width is selected by type application:
+--
+-- @
+-- fnv1 \@'Word64' \"hello\"
+-- @
 fnv1 :: forall result mono. (FNVData mono, FNVResult result) => mono -> result
 fnv1 = fnvGeneric fnvRound
   where
@@ -63,6 +84,13 @@ fnv1 = fnvGeneric fnvRound
     fnvRound !acc !octet = (acc * fnvPrime) `xor` fromIntegral octet
 {-# INLINEABLE fnv1 #-}
 
+-- | FNV-1a hash of a monomorphic container.
+--
+-- The result width is selected by type application:
+--
+-- @
+-- fnv1a \@'Word64' \"hello\"
+-- @
 fnv1a :: forall result mono. (FNVData mono, FNVResult result) => mono -> result
 fnv1a = fnvGeneric fnvRound
   where

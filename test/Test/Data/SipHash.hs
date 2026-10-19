@@ -12,6 +12,7 @@ key = 0x000102030405060708090a0b0c0d0e0f
 inputs :: (IsString a, Monoid a) => [a]
 inputs = fmap (\n -> fromString $ fmap chr [0 .. n - 1]) [0 .. 64 - 1]
 
+-- | Inputs that exercise the SipHash length-byte wrap at 256 bytes.
 boundaryInputs :: [BS.ByteString]
 boundaryInputs = [BS.replicate n 97 | n <- [254, 255, 256, 257, 258, 511, 512, 513]]
 
@@ -151,6 +152,8 @@ sipHash24VectorsForWord128 =
     0x5150d1772f50834a503e069a973fbd7c
   ]
 
+-- | Vectors for 'boundaryInputs', generated from the pre-streaming
+-- implementation.
 boundaryVectorsForWord64 :: [Word64]
 boundaryVectorsForWord64 =
   [ 0xe551b8d1dec12800,

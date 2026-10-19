@@ -2,6 +2,11 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
+-- | SipHash-@c@-@d@ for any 'MonoFoldable' container.
+--
+-- The implementation streams over the input one byte at a time and uses
+-- constant memory. The output width is chosen by the type application; see
+-- 'sipHash'.
 module Data.Hash.Mono.SipHash
   ( SipHashData,
     SipHashResult,
@@ -19,9 +24,12 @@ import Data.WideWord.Word128 (Word128 (..))
 import Data.Word (Word64, Word8)
 import Numeric (showHex)
 
+-- | Supported SipHash output widths.
 class SipHashResult a where
+  -- | Apply output-width-specific initialization to the hash state.
   initialize :: SipData -> SipData
 
+  -- | Run the finalization rounds and extract the result.
   finalization :: Word -> SipData -> a
 
 instance SipHashResult Word64 where
@@ -48,13 +56,21 @@ instance SipHashResult Word128 where
         lo = word64ToLE $ v0'' `xor` v1''' `xor` v2''' `xor` v3''
      in Word128 hi lo
 
+-- | Constraint for containers that can be hashed with SipHash.
+--
+-- The container's element type must have a ToWords instance.
 type SipHashData a = (MonoFoldable a, ToWords (Element a))
 
+-- | SipHash internal state, consisting of four 64-bit words.
 data SipData = SipData
   { sv0 :: {-# UNPACK #-} !Word64,
+    -- ^ First state word.
     sv1 :: {-# UNPACK #-} !Word64,
+    -- ^ Second state word.
     sv2 :: {-# UNPACK #-} !Word64,
+    -- ^ Third state word.
     sv3 :: {-# UNPACK #-} !Word64
+    -- ^ Fourth state word.
   }
 
 instance Show SipData where
@@ -70,13 +86,32 @@ instance Show SipData where
         showHex v3 ""
       ]
 
+-- | Streaming SipHash state.
+--
+-- The input is consumed one byte at a time. Once eight bytes have been
+-- buffered they are compressed into 'ssData', so hashing uses constant
+-- memory regardless of input size.
 data SipStream = SipStream
   { ssData :: {-# UNPACK #-} !SipData,
+    -- ^ Current hash state.
     ssWord :: {-# UNPACK #-} !Word64,
+    -- ^ Partial input word currently being assembled.
     ssCount :: {-# UNPACK #-} !Int,
+    -- ^ Number of bytes buffered in 'ssWord' (0-7).
     ssLen :: {-# UNPACK #-} !Word8
+    -- ^ Number of input bytes seen modulo 256.
   }
 
+-- | Compute SipHash-@c@-@d@ of a monomorphic container.
+--
+-- @c@ and @d@ are the compression and finalization round counts; SipHash-2-4
+-- is the common choice. The 128-bit key is split into two 64-bit halves.
+--
+-- The result width is selected by type application:
+--
+-- @
+-- sipHash \@'Word64' 2 4 key input
+-- @
 sipHash :: forall result mono. (SipHashData mono, SipHashResult result) => Word -> Word -> Word128 -> mono -> result
 sipHash c d key mono =
   case ofoldl' (foldlWords (step c)) initStream mono of
@@ -108,6 +143,7 @@ sipHash c d key mono =
         }
 {-# INLINABLE sipHash #-}
 
+-- | Feed one byte into the stream, compressing a full 64-bit word when needed.
 step :: Word -> SipStream -> Word8 -> SipStream
 step c SipStream {ssData = d, ssWord = word, ssCount = n, ssLen = len} !b =
   let word' = word .|. (fromIntegral b `shiftL` (8 * n))
@@ -117,6 +153,7 @@ step c SipStream {ssData = d, ssWord = word, ssCount = n, ssLen = len} !b =
         else SipStream {ssData = d, ssWord = word', ssCount = n + 1, ssLen = len'}
 {-# INLINE step #-}
 
+-- | Compress one complete 64-bit input word into the hash state.
 compress :: Word -> SipData -> Word64 -> SipData
 compress c (SipData !v0 !v1 !v2 !v3) m =
   let v3' = v3 `xor` m
@@ -125,6 +162,7 @@ compress c (SipData !v0 !v1 !v2 !v3) m =
    in SipData v0'' v1' v2' v3''
 {-# INLINE compress #-}
 
+-- | One SipHash round.
 sipRound :: SipData -> SipData
 sipRound (SipData !v0 !v1 !v2 !v3) =
   let v0' = v0 + v1
@@ -144,6 +182,7 @@ sipRound (SipData !v0 !v1 !v2 !v3) =
    in SipData v0''' v1'''' v2''' v3''''
 {-# INLINE sipRound #-}
 
+-- | Apply SipHash rounds @n@ times.
 sipRoundN :: Word -> SipData -> SipData
 sipRoundN n !x
   | n <= 0 = x
