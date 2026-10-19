@@ -9,23 +9,19 @@ module Data.Hash.Mono.SipHash
   )
 where
 
-import Data.Bits (Bits (rotateL, xor))
-import Data.Foldable qualified as Foldable
+import Data.Bits (Bits (rotateL, shiftL, xor, (.|.)))
 import Data.Hash.Mono.Internal
   ( ToWords (..),
-    mkWord16,
-    mkWord32,
-    mkWord64,
     word64ToLE,
   )
 import Data.MonoTraversable (Element, MonoFoldable (ofoldl'))
-import Data.Sequence qualified as Seq
 import Data.WideWord.Word128 (Word128 (..))
 import Data.Word (Word64, Word8)
 import Numeric (showHex)
 
 class SipHashResult a where
   initialize :: SipData -> SipData
+
   finalization :: Word -> SipData -> a
 
 instance SipHashResult Word64 where
@@ -74,16 +70,19 @@ instance Show SipData where
         showHex v3 ""
       ]
 
-sipHash :: forall result mono. (SipHashData mono, SipHashResult result) => Word -> Word -> Word128 -> mono -> result
-sipHash c d key = finalization d . Foldable.foldl' compression (initialize @result initData) . chunkSipHashData
-  where
-    compression :: SipData -> Word64 -> SipData
-    compression (SipData !v0 !v1 !v2 !v3) m =
-      let v3' = v3 `xor` m
-          (SipData !v0' !v1' !v2' !v3'') = sipRoundN c (SipData v0 v1 v2 v3')
-          v0'' = v0' `xor` m
-       in SipData v0'' v1' v2' v3''
+data SipStream = SipStream
+  { ssData :: {-# UNPACK #-} !SipData,
+    ssWord :: {-# UNPACK #-} !Word64,
+    ssCount :: {-# UNPACK #-} !Int,
+    ssLen :: {-# UNPACK #-} !Word8
+  }
 
+sipHash :: forall result mono. (SipHashData mono, SipHashResult result) => Word -> Word -> Word128 -> mono -> result
+sipHash c d key mono =
+  case ofoldl' (foldlWords (step c)) initStream mono of
+    SipStream {ssData = state, ssWord = word, ssLen = len} ->
+      finalization d (compress c state (word .|. (fromIntegral len `shiftL` 56)))
+  where
     initData :: SipData
     initData =
       SipData
@@ -98,6 +97,33 @@ sipHash c d key = finalization d . Foldable.foldl' compression (initialize @resu
 
         k1 :: Word64
         k1 = word64ToLE $ word128Lo64 key
+
+    initStream :: SipStream
+    initStream =
+      SipStream
+        { ssData = initialize @result initData,
+          ssWord = 0,
+          ssCount = 0,
+          ssLen = 0
+        }
+{-# INLINABLE sipHash #-}
+
+step :: Word -> SipStream -> Word8 -> SipStream
+step c SipStream {ssData = d, ssWord = word, ssCount = n, ssLen = len} !b =
+  let word' = word .|. (fromIntegral b `shiftL` (8 * n))
+      len' = len + 1
+   in if n == 7
+        then SipStream {ssData = compress c d word', ssWord = 0, ssCount = 0, ssLen = len'}
+        else SipStream {ssData = d, ssWord = word', ssCount = n + 1, ssLen = len'}
+{-# INLINE step #-}
+
+compress :: Word -> SipData -> Word64 -> SipData
+compress c (SipData !v0 !v1 !v2 !v3) m =
+  let v3' = v3 `xor` m
+      (SipData !v0' !v1' !v2' !v3'') = sipRoundN c (SipData v0 v1 v2 v3')
+      v0'' = v0' `xor` m
+   in SipData v0'' v1' v2' v3''
+{-# INLINE compress #-}
 
 sipRound :: SipData -> SipData
 sipRound (SipData !v0 !v1 !v2 !v3) =
@@ -116,42 +142,10 @@ sipRound (SipData !v0 !v1 !v2 !v3) =
       v1'''' = v1''' `xor` v2''
       v2''' = v2'' `rotateL` 32
    in SipData v0''' v1'''' v2''' v3''''
+{-# INLINE sipRound #-}
 
 sipRoundN :: Word -> SipData -> SipData
 sipRoundN n !x
   | n <= 0 = x
   | otherwise = sipRoundN (n - 1) $! sipRound x
-
-chunkSipHashData :: forall a. (SipHashData a) => a -> [Word64]
-chunkSipHashData = chunkWords . collectWords
-  where
-    collectWords :: a -> (Int, Seq.Seq Word8)
-    collectWords = ofoldl' f (0, Seq.empty)
-      where
-        f :: (ToWords c) => (Int, Seq.Seq Word8) -> c -> (Int, Seq.Seq Word8)
-        f (!len, !word8s) c =
-          let !word8s' = Seq.fromList $ toWords c
-           in (len + Seq.length word8s', (Seq.><) word8s word8s')
-
-    chunkWords :: (Int, Seq.Seq Word8) -> [Word64]
-    chunkWords (len, word8s) = go $ Foldable.toList word8s
-      where
-        lenWord :: Word8
-        lenWord = fromIntegral $ len `mod` 256
-
-        go :: [Word8] -> [Word64]
-        go (c0 : c1 : c2 : c3 : c4 : c5 : c6 : c7 : xs) =
-          mkWord c7 c6 c5 c4 c3 c2 c1 c0 : go xs
-        go [c0, c1, c2, c3, c4, c5, c6] = [mkWord lenWord c6 c5 c4 c3 c2 c1 c0]
-        go [c0, c1, c2, c3, c4, c5] = [mkWord lenWord 0 c5 c4 c3 c2 c1 c0]
-        go [c0, c1, c2, c3, c4] = [mkWord lenWord 0 0 c4 c3 c2 c1 c0]
-        go [c0, c1, c2, c3] = [mkWord lenWord 0 0 0 c3 c2 c1 c0]
-        go [c0, c1, c2] = [mkWord lenWord 0 0 0 0 c2 c1 c0]
-        go [c0, c1] = [mkWord lenWord 0 0 0 0 0 c1 c0]
-        go [c0] = [mkWord lenWord 0 0 0 0 0 0 c0]
-        go [] = [mkWord lenWord 0 0 0 0 0 0 0]
-
-    mkWord :: Word8 -> Word8 -> Word8 -> Word8 -> Word8 -> Word8 -> Word8 -> Word8 -> Word64
-    mkWord !c0 !c1 !c2 !c3 !c4 !c5 !c6 !c7 =
-      mkWord64 (mkWord32 (mkWord16 c0 c1) (mkWord16 c2 c3)) (mkWord32 (mkWord16 c4 c5) (mkWord16 c6 c7))
-    {-# INLINE mkWord #-}
+{-# INLINE sipRoundN #-}

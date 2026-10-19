@@ -1,6 +1,7 @@
 module Test.Data.HalfSipHash where
 
 import Data.Char (chr)
+import qualified Data.ByteString as BS
 import Data.String (IsString, fromString)
 import Data.Word (Word32, Word64)
 
@@ -9,6 +10,9 @@ key = 0x0001020304050607
 
 inputs :: (IsString a, Monoid a) => [a]
 inputs = fmap (\n -> fromString $ fmap chr [0 .. n - 1]) [0 .. 64 - 1]
+
+boundaryInputs :: [BS.ByteString]
+boundaryInputs = [BS.replicate n 97 | n <- [254, 255, 256, 257, 258, 511, 512, 513]]
 
 halfSipHash24VectorsForWord32 :: [Word32]
 halfSipHash24VectorsForWord32 =
@@ -144,4 +148,16 @@ halfSipHash24VectorsForWord64 =
     0x313563a4b7ed5cf3,
     0xf90b3ab572d46693,
     0x2ea63c71bf326087
+  ]
+
+boundaryVectorsForWord32 :: [Word32]
+boundaryVectorsForWord32 =
+  [ 0x4db2af8b,
+    0x4fbcde80,
+    0x6317c2cc,
+    0x3ce6aa74,
+    0x7a3810c1,
+    0x9689238d,
+    0x6f9825ea,
+    0xaa1f7179
   ]

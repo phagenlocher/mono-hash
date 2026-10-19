@@ -12,124 +12,94 @@ where
 
 import Data.Bits (Bits (shiftL, shiftR, (.&.)))
 import Data.Char qualified as Char
-import Data.List qualified as List
 import Data.WideWord.Word128 (Word128)
 import Data.WideWord.Word256 (Word256)
 import Data.Word (Word16, Word32, Word64, Word8)
 
 class ToWords a where
-  toWords :: a -> [Word8]
+  foldlWords :: (b -> Word8 -> b) -> b -> a -> b
 
 instance ToWords Char where
-  toWords :: Char -> [Word8]
-  toWords c
-    | c == '\x00' = [0]
-    | otherwise = List.reverse $ go (Char.ord c)
+  foldlWords f z c
+    | n < 0x100 = f z (fromIntegral n)
+    | n < 0x10000 =
+        f (f z (fromIntegral (n `shiftR` 8))) (fromIntegral n)
+    | otherwise =
+        f
+          ( f
+              (f z (fromIntegral (n `shiftR` 16)))
+              (fromIntegral (n `shiftR` 8))
+          )
+          (fromIntegral n)
     where
-      go :: Int -> [Word8]
-      go n
-        | n <= 0 = []
-        | otherwise =
-            let octet = fromIntegral (n .&. 0xff)
-             in octet : go (n `shiftR` 8)
-  {-# INLINEABLE toWords #-}
+      n :: Int
+      n = Char.ord c
+  {-# INLINE foldlWords #-}
 
 instance ToWords Word8 where
-  toWords :: Word8 -> [Word8]
-  toWords w = [w]
-  {-# INLINE toWords #-}
+  foldlWords f z w = f z w
+  {-# INLINE foldlWords #-}
 
 instance ToWords Word16 where
-  toWords :: Word16 -> [Word8]
-  toWords w =
-    [ fromIntegral $ (w `shiftR` 8) .&. 0xff,
-      fromIntegral $ w .&. 0xff
-    ]
-  {-# INLINE toWords #-}
+  foldlWords f z w =
+    f (f z (fromIntegral (w `shiftR` 8))) (fromIntegral w)
+  {-# INLINE foldlWords #-}
 
 instance ToWords Word32 where
-  toWords :: Word32 -> [Word8]
-  toWords w =
-    [ fromIntegral $ (w `shiftR` 24) .&. 0xff,
-      fromIntegral $ (w `shiftR` 16) .&. 0xff,
-      fromIntegral $ (w `shiftR` 8) .&. 0xff,
-      fromIntegral $ w .&. 0xff
-    ]
-  {-# INLINE toWords #-}
+  foldlWords f z w =
+    f
+      ( f
+          ( f
+              (f z (fromIntegral (w `shiftR` 24)))
+              (fromIntegral (w `shiftR` 16))
+          )
+          (fromIntegral (w `shiftR` 8))
+      )
+      (fromIntegral w)
+  {-# INLINE foldlWords #-}
 
 instance ToWords Word64 where
-  toWords :: Word64 -> [Word8]
-  toWords w =
-    [ fromIntegral $ (w `shiftR` 56) .&. 0xff,
-      fromIntegral $ (w `shiftR` 48) .&. 0xff,
-      fromIntegral $ (w `shiftR` 40) .&. 0xff,
-      fromIntegral $ (w `shiftR` 32) .&. 0xff,
-      fromIntegral $ (w `shiftR` 24) .&. 0xff,
-      fromIntegral $ (w `shiftR` 16) .&. 0xff,
-      fromIntegral $ (w `shiftR` 8) .&. 0xff,
-      fromIntegral $ w .&. 0xff
-    ]
-  {-# INLINE toWords #-}
+  foldlWords f z w =
+    f
+      ( f
+          ( f
+              ( f
+                  ( f
+                      ( f
+                          ( f
+                              (f z (fromIntegral (w `shiftR` 56)))
+                              (fromIntegral (w `shiftR` 48))
+                          )
+                          (fromIntegral (w `shiftR` 40))
+                      )
+                      (fromIntegral (w `shiftR` 32))
+                  )
+                  (fromIntegral (w `shiftR` 24))
+              )
+              (fromIntegral (w `shiftR` 16))
+          )
+          (fromIntegral (w `shiftR` 8))
+      )
+      (fromIntegral w)
+  {-# INLINE foldlWords #-}
 
 instance ToWords Word128 where
-  toWords :: Word128 -> [Word8]
-  toWords w =
-    [ fromIntegral $ (w `shiftR` 120) .&. 0xff,
-      fromIntegral $ (w `shiftR` 112) .&. 0xff,
-      fromIntegral $ (w `shiftR` 104) .&. 0xff,
-      fromIntegral $ (w `shiftR` 96) .&. 0xff,
-      fromIntegral $ (w `shiftR` 88) .&. 0xff,
-      fromIntegral $ (w `shiftR` 80) .&. 0xff,
-      fromIntegral $ (w `shiftR` 72) .&. 0xff,
-      fromIntegral $ (w `shiftR` 64) .&. 0xff,
-      fromIntegral $ (w `shiftR` 56) .&. 0xff,
-      fromIntegral $ (w `shiftR` 48) .&. 0xff,
-      fromIntegral $ (w `shiftR` 40) .&. 0xff,
-      fromIntegral $ (w `shiftR` 32) .&. 0xff,
-      fromIntegral $ (w `shiftR` 24) .&. 0xff,
-      fromIntegral $ (w `shiftR` 16) .&. 0xff,
-      fromIntegral $ (w `shiftR` 8) .&. 0xff,
-      fromIntegral $ w .&. 0xff
-    ]
-  {-# INLINE toWords #-}
+  foldlWords f z w = go 15 z
+    where
+      go i acc
+        | i < 0 = acc
+        | otherwise =
+            go (i - 1) $! f acc (fromIntegral (w `shiftR` (8 * i)))
+  {-# INLINE foldlWords #-}
 
 instance ToWords Word256 where
-  toWords :: Word256 -> [Word8]
-  toWords w =
-    [ fromIntegral $ (w `shiftR` 248) .&. 0xff,
-      fromIntegral $ (w `shiftR` 240) .&. 0xff,
-      fromIntegral $ (w `shiftR` 232) .&. 0xff,
-      fromIntegral $ (w `shiftR` 224) .&. 0xff,
-      fromIntegral $ (w `shiftR` 216) .&. 0xff,
-      fromIntegral $ (w `shiftR` 208) .&. 0xff,
-      fromIntegral $ (w `shiftR` 200) .&. 0xff,
-      fromIntegral $ (w `shiftR` 192) .&. 0xff,
-      fromIntegral $ (w `shiftR` 184) .&. 0xff,
-      fromIntegral $ (w `shiftR` 176) .&. 0xff,
-      fromIntegral $ (w `shiftR` 168) .&. 0xff,
-      fromIntegral $ (w `shiftR` 160) .&. 0xff,
-      fromIntegral $ (w `shiftR` 152) .&. 0xff,
-      fromIntegral $ (w `shiftR` 144) .&. 0xff,
-      fromIntegral $ (w `shiftR` 136) .&. 0xff,
-      fromIntegral $ (w `shiftR` 128) .&. 0xff,
-      fromIntegral $ (w `shiftR` 120) .&. 0xff,
-      fromIntegral $ (w `shiftR` 112) .&. 0xff,
-      fromIntegral $ (w `shiftR` 104) .&. 0xff,
-      fromIntegral $ (w `shiftR` 96) .&. 0xff,
-      fromIntegral $ (w `shiftR` 88) .&. 0xff,
-      fromIntegral $ (w `shiftR` 80) .&. 0xff,
-      fromIntegral $ (w `shiftR` 72) .&. 0xff,
-      fromIntegral $ (w `shiftR` 64) .&. 0xff,
-      fromIntegral $ (w `shiftR` 56) .&. 0xff,
-      fromIntegral $ (w `shiftR` 48) .&. 0xff,
-      fromIntegral $ (w `shiftR` 40) .&. 0xff,
-      fromIntegral $ (w `shiftR` 32) .&. 0xff,
-      fromIntegral $ (w `shiftR` 24) .&. 0xff,
-      fromIntegral $ (w `shiftR` 16) .&. 0xff,
-      fromIntegral $ (w `shiftR` 8) .&. 0xff,
-      fromIntegral $ w .&. 0xff
-    ]
-  {-# INLINE toWords #-}
+  foldlWords f z w = go 31 z
+    where
+      go i acc
+        | i < 0 = acc
+        | otherwise =
+            go (i - 1) $! f acc (fromIntegral (w `shiftR` (8 * i)))
+  {-# INLINE foldlWords #-}
 
 word64ToLE :: Word64 -> Word64
 word64ToLE w =

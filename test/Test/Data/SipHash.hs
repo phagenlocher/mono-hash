@@ -1,6 +1,7 @@
 module Test.Data.SipHash where
 
 import Data.Char (chr)
+import qualified Data.ByteString as BS
 import Data.String (IsString, fromString)
 import Data.WideWord.Word128 (Word128)
 import Data.Word (Word64)
@@ -10,6 +11,9 @@ key = 0x000102030405060708090a0b0c0d0e0f
 
 inputs :: (IsString a, Monoid a) => [a]
 inputs = fmap (\n -> fromString $ fmap chr [0 .. n - 1]) [0 .. 64 - 1]
+
+boundaryInputs :: [BS.ByteString]
+boundaryInputs = [BS.replicate n 97 | n <- [254, 255, 256, 257, 258, 511, 512, 513]]
 
 sipHash24VectorsForWord64 :: [Word64]
 sipHash24VectorsForWord64 =
@@ -145,4 +149,16 @@ sipHash24VectorsForWord128 =
     0x7697009a6a831dfecca91c5993670f7a,
     0x5853542321f567a005d547a4f04759bd,
     0x5150d1772f50834a503e069a973fbd7c
+  ]
+
+boundaryVectorsForWord64 :: [Word64]
+boundaryVectorsForWord64 =
+  [ 0xe551b8d1dec12800,
+    0x4d40f8f94fca87e9,
+    0x0e3448de38314103,
+    0x018037d9d2d8d0a5,
+    0x10b086d5786f30de,
+    0x5285aa37a183b2b2,
+    0xa2146cb02f32b79c,
+    0x5bd233133a1dd6ba
   ]

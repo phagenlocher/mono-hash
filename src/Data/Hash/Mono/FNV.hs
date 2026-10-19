@@ -10,14 +10,14 @@ where
 
 import Data.Bits (Bits (xor))
 import Data.Hash.Mono.Internal (ToWords (..))
-import Data.List qualified as List
 import Data.MonoTraversable (Element, MonoFoldable (ofoldl'))
 import Data.WideWord.Word128 (Word128)
 import Data.WideWord.Word256 (Word256)
-import Data.Word (Word32, Word64)
+import Data.Word (Word32, Word64, Word8)
 
 class HasFNVBasis a where
   fnvOffsetBasis :: a
+
   fnvPrime :: a
 
 instance HasFNVBasis Word32 where
@@ -52,23 +52,20 @@ type FNVResult a = (HasFNVBasis a, Bits a, Num a)
 
 type FNVData a = (MonoFoldable a, ToWords (Element a))
 
-fnvGeneric :: forall result mono. (FNVData mono, FNVResult result) => (result -> result -> result) -> mono -> result
-fnvGeneric fnvRound = ofoldl' f fnvOffsetBasis
-  where
-    f :: result -> Element mono -> result
-    f !acc = List.foldl' fnvRound acc . List.map fromIntegral . toWords
+fnvGeneric :: forall result mono. (FNVData mono, FNVResult result) => (result -> Word8 -> result) -> mono -> result
+fnvGeneric fnvRound = ofoldl' (foldlWords fnvRound) fnvOffsetBasis
 {-# INLINE fnvGeneric #-}
 
 fnv1 :: forall result mono. (FNVData mono, FNVResult result) => mono -> result
 fnv1 = fnvGeneric fnvRound
   where
-    fnvRound :: result -> result -> result
-    fnvRound !acc !octet = (acc * fnvPrime) `xor` octet
+    fnvRound :: result -> Word8 -> result
+    fnvRound !acc !octet = (acc * fnvPrime) `xor` fromIntegral octet
 {-# INLINEABLE fnv1 #-}
 
 fnv1a :: forall result mono. (FNVData mono, FNVResult result) => mono -> result
 fnv1a = fnvGeneric fnvRound
   where
-    fnvRound :: result -> result -> result
-    fnvRound !acc !octet = (acc `xor` octet) * fnvPrime
+    fnvRound :: result -> Word8 -> result
+    fnvRound !acc !octet = (acc `xor` fromIntegral octet) * fnvPrime
 {-# INLINEABLE fnv1a #-}
