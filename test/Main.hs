@@ -14,7 +14,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Data.WideWord.Word128 (Word128)
 import Data.WideWord.Word256 (Word256)
-import Data.Word (Word32, Word64, Word8)
+import Data.Word (Word16, Word32, Word64, Word8)
 import qualified Test.Data.FNV
 import qualified Test.Data.HalfSipHash
 import qualified Test.Data.SipHash
@@ -45,6 +45,18 @@ charBytes c
 wordBytes :: (Bits a, Integral a) => Int -> a -> [Word8]
 wordBytes width w =
   [fromIntegral (w `shiftR` (8 * i)) | i <- [width - 1, width - 2 .. 0]]
+
+packWords :: (Bits a, Integral a) => Int -> [a] -> BS.ByteString
+packWords width = BS.pack . concatMap (wordBytes width)
+
+word16Samples :: [Word16]
+word16Samples = [0x0102, 0x0304, 0xfffe]
+
+word32Samples :: [Word32]
+word32Samples = [0x01020304, 0x05060708, 0xdeadbeef]
+
+word64Samples :: [Word64]
+word64Samples = [0x0102030405060708, 0x1112131415161718, 0xdeadbeefcafed00d]
 
 word128Sample :: Word128
 word128Sample =
@@ -94,7 +106,15 @@ tests =
             fnv1a @Word64 (T.pack charEncodingInput) @?= fnv1a @Word64 bytes,
           testCase "FNV1a Word64 word elements match bytes" $ do
             fnv1a @Word64 [word128Sample] @?= fnv1a @Word64 (BS.pack (wordBytes 16 word128Sample))
-            fnv1a @Word64 [word256Sample] @?= fnv1a @Word64 (BS.pack (wordBytes 32 word256Sample))
+            fnv1a @Word64 [word256Sample] @?= fnv1a @Word64 (BS.pack (wordBytes 32 word256Sample)),
+          testCase "FNV1 Word64 small word elements match bytes" $ do
+            fnv1 @Word64 word16Samples @?= fnv1 @Word64 (packWords 2 word16Samples)
+            fnv1 @Word64 word32Samples @?= fnv1 @Word64 (packWords 4 word32Samples)
+            fnv1 @Word64 word64Samples @?= fnv1 @Word64 (packWords 8 word64Samples),
+          testCase "FNV1a Word64 small word elements match bytes" $ do
+            fnv1a @Word64 word16Samples @?= fnv1a @Word64 (packWords 2 word16Samples)
+            fnv1a @Word64 word32Samples @?= fnv1a @Word64 (packWords 4 word32Samples)
+            fnv1a @Word64 word64Samples @?= fnv1a @Word64 (packWords 8 word64Samples)
         ],
       testGroup
         "SipHash"
@@ -117,7 +137,11 @@ tests =
             sipHash @Word64 2 4 Test.Data.SipHash.key (T.pack charEncodingInput) @?= sipHash @Word64 2 4 Test.Data.SipHash.key bytes,
           testCase "SipHash-2-4 Word64 word elements match bytes" $ do
             sipHash @Word64 2 4 Test.Data.SipHash.key [word128Sample] @?= sipHash @Word64 2 4 Test.Data.SipHash.key (BS.pack (wordBytes 16 word128Sample))
-            sipHash @Word64 2 4 Test.Data.SipHash.key [word256Sample] @?= sipHash @Word64 2 4 Test.Data.SipHash.key (BS.pack (wordBytes 32 word256Sample))
+            sipHash @Word64 2 4 Test.Data.SipHash.key [word256Sample] @?= sipHash @Word64 2 4 Test.Data.SipHash.key (BS.pack (wordBytes 32 word256Sample)),
+          testCase "SipHash-2-4 Word64 small word elements match bytes" $ do
+            sipHash @Word64 2 4 Test.Data.SipHash.key word16Samples @?= sipHash @Word64 2 4 Test.Data.SipHash.key (packWords 2 word16Samples)
+            sipHash @Word64 2 4 Test.Data.SipHash.key word32Samples @?= sipHash @Word64 2 4 Test.Data.SipHash.key (packWords 4 word32Samples)
+            sipHash @Word64 2 4 Test.Data.SipHash.key word64Samples @?= sipHash @Word64 2 4 Test.Data.SipHash.key (packWords 8 word64Samples)
         ],
       testGroup
         "HalfSipHash"
@@ -140,6 +164,10 @@ tests =
             halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key (T.pack charEncodingInput) @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key bytes,
           testCase "HalfSipHash-2-4 Word32 word elements match bytes" $ do
             halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key [word128Sample] @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key (BS.pack (wordBytes 16 word128Sample))
-            halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key [word256Sample] @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key (BS.pack (wordBytes 32 word256Sample))
+            halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key [word256Sample] @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key (BS.pack (wordBytes 32 word256Sample)),
+          testCase "HalfSipHash-2-4 Word32 small word elements match bytes" $ do
+            halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key word16Samples @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key (packWords 2 word16Samples)
+            halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key word32Samples @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key (packWords 4 word32Samples)
+            halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key word64Samples @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key (packWords 8 word64Samples)
         ]
     ]
