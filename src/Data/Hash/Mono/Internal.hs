@@ -13,8 +13,8 @@ where
 
 import Data.Bits (Bits (shiftL, shiftR, (.&.)))
 import Data.Char qualified as Char
-import Data.WideWord.Word128 (Word128)
-import Data.WideWord.Word256 (Word256)
+import Data.WideWord.Word128 (Word128 (..))
+import Data.WideWord.Word256 (Word256 (..))
 import Data.Word (Word16, Word32, Word64, Word8)
 
 -- | Types that can be viewed as a sequence of bytes.
@@ -93,21 +93,21 @@ instance ToWords Word64 where
   {-# INLINE foldlWords #-}
 
 instance ToWords Word128 where
-  foldlWords f z w = go 15 z
-    where
-      go i acc
-        | i < 0 = acc
-        | otherwise =
-            go (i - 1) $! f acc (fromIntegral (w `shiftR` (8 * i)))
+  foldlWords f z w =
+    foldlWords f (foldlWords f z (word128Hi64 w)) (word128Lo64 w)
   {-# INLINE foldlWords #-}
 
 instance ToWords Word256 where
-  foldlWords f z w = go 31 z
-    where
-      go i acc
-        | i < 0 = acc
-        | otherwise =
-            go (i - 1) $! f acc (fromIntegral (w `shiftR` (8 * i)))
+  foldlWords f z w =
+    foldlWords f
+      ( foldlWords f
+          ( foldlWords f
+              (foldlWords f z (word256hi w))
+              (word256m1 w)
+          )
+          (word256m0 w)
+      )
+      (word256lo w)
   {-# INLINE foldlWords #-}
 
 -- | Reverse the byte order of a 'Word64'.

@@ -6,13 +6,14 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Lazy.Char8 as BSLC
-import Data.Bits (shiftR)
+import Data.Bits (Bits, shiftL, shiftR)
 import Data.Hash.Mono.FNV (fnv1, fnv1a)
 import Data.Hash.Mono.HalfSipHash
 import Data.Hash.Mono.SipHash
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.WideWord.Word128 (Word128)
+import Data.WideWord.Word256 (Word256)
 import Data.Word (Word32, Word64, Word8)
 import qualified Test.Data.FNV
 import qualified Test.Data.HalfSipHash
@@ -39,6 +40,23 @@ charBytes c
       ]
   where
     n = fromEnum c
+
+-- | Big-endian bytes of a fixed-width word.
+wordBytes :: (Bits a, Integral a) => Int -> a -> [Word8]
+wordBytes width w =
+  [fromIntegral (w `shiftR` (8 * i)) | i <- [width - 1, width - 2 .. 0]]
+
+word128Sample :: Word128
+word128Sample =
+  (fromIntegral (0x0102030405060708 :: Word64) `shiftL` 64)
+    + fromIntegral (0x1112131415161718 :: Word64)
+
+word256Sample :: Word256
+word256Sample =
+  (fromIntegral (0x2122232425262728 :: Word64) `shiftL` 192)
+    + (fromIntegral (0x3132333435363738 :: Word64) `shiftL` 128)
+    + (fromIntegral (0x4142434445464748 :: Word64) `shiftL` 64)
+    + fromIntegral (0x5152535455565758 :: Word64)
 
 tests :: TestTree
 tests =
@@ -73,7 +91,10 @@ tests =
           testCase "FNV1a Word64 Char encoding matches bytes" $ do
             let bytes = BS.pack (concatMap charBytes charEncodingInput)
             fnv1a @Word64 charEncodingInput @?= fnv1a @Word64 bytes
-            fnv1a @Word64 (T.pack charEncodingInput) @?= fnv1a @Word64 bytes
+            fnv1a @Word64 (T.pack charEncodingInput) @?= fnv1a @Word64 bytes,
+          testCase "FNV1a Word64 word elements match bytes" $ do
+            fnv1a @Word64 [word128Sample] @?= fnv1a @Word64 (BS.pack (wordBytes 16 word128Sample))
+            fnv1a @Word64 [word256Sample] @?= fnv1a @Word64 (BS.pack (wordBytes 32 word256Sample))
         ],
       testGroup
         "SipHash"
@@ -93,7 +114,10 @@ tests =
           testCase "SipHash-2-4 Word64 Char encoding matches bytes" $ do
             let bytes = BS.pack (concatMap charBytes charEncodingInput)
             sipHash @Word64 2 4 Test.Data.SipHash.key charEncodingInput @?= sipHash @Word64 2 4 Test.Data.SipHash.key bytes
-            sipHash @Word64 2 4 Test.Data.SipHash.key (T.pack charEncodingInput) @?= sipHash @Word64 2 4 Test.Data.SipHash.key bytes
+            sipHash @Word64 2 4 Test.Data.SipHash.key (T.pack charEncodingInput) @?= sipHash @Word64 2 4 Test.Data.SipHash.key bytes,
+          testCase "SipHash-2-4 Word64 word elements match bytes" $ do
+            sipHash @Word64 2 4 Test.Data.SipHash.key [word128Sample] @?= sipHash @Word64 2 4 Test.Data.SipHash.key (BS.pack (wordBytes 16 word128Sample))
+            sipHash @Word64 2 4 Test.Data.SipHash.key [word256Sample] @?= sipHash @Word64 2 4 Test.Data.SipHash.key (BS.pack (wordBytes 32 word256Sample))
         ],
       testGroup
         "HalfSipHash"
@@ -113,6 +137,9 @@ tests =
           testCase "HalfSipHash-2-4 Word32 Char encoding matches bytes" $ do
             let bytes = BS.pack (concatMap charBytes charEncodingInput)
             halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key charEncodingInput @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key bytes
-            halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key (T.pack charEncodingInput) @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key bytes
+            halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key (T.pack charEncodingInput) @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key bytes,
+          testCase "HalfSipHash-2-4 Word32 word elements match bytes" $ do
+            halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key [word128Sample] @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key (BS.pack (wordBytes 16 word128Sample))
+            halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key [word256Sample] @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key (BS.pack (wordBytes 32 word256Sample))
         ]
     ]

@@ -32,6 +32,16 @@ mkSizes f =
       sizeHuge = f 10000000
     }
 
+-- | Smaller sizes for element types with a large in-memory footprint.
+mkElementSizes :: (Int -> a) -> Sizes a
+mkElementSizes f =
+  Sizes
+    { sizeSmall = f 100,
+      sizeMedium = f 1000,
+      sizeLarge = f 10000,
+      sizeHuge = f 0
+    }
+
 forceSizes :: (NFData a) => Sizes a -> IO (Sizes a)
 forceSizes sizes@(Sizes small medium large huge) = do
   _ <- evaluate $ force (small, medium, large, huge)
@@ -57,6 +67,8 @@ main = do
   strings <- forceSizes $ mkSizes (\n -> replicate n 'a')
   bytes <- forceSizes $ mkSizes (\n -> BS.replicate n 97)
   texts <- forceSizes $ mkSizes (\n -> T.replicate n (T.singleton 'a'))
+  word128s <- forceSizes $ mkElementSizes (\n -> [fromIntegral i :: Word128 | i <- [0 .. n - 1]])
+  word256s <- forceSizes $ mkElementSizes (\n -> [fromIntegral i :: Word256 | i <- [0 .. n - 1]])
 
   boundaryInputs <-
     evaluate $
@@ -88,5 +100,11 @@ main = do
         "SipHash-2-4 Word64 length boundary"
         [ bench (show n) $ whnf (sipHash @Word64 2 4 0xc0ffee) input
           | (n, input) <- boundaryInputs
-        ]
+        ],
+      bgroup "FNV1a Word64/[Word128]" $ mkBenchNoHuge (fnv1a @Word64) word128s,
+      bgroup "FNV1a Word256/[Word128]" $ mkBenchNoHuge (fnv1a @Word256) word128s,
+      bgroup "SipHash-2-4 Word64/[Word128]" $ mkBenchNoHuge (sipHash @Word64 2 4 0xc0ffee) word128s,
+      bgroup "FNV1a Word64/[Word256]" $ mkBenchNoHuge (fnv1a @Word64) word256s,
+      bgroup "FNV1a Word256/[Word256]" $ mkBenchNoHuge (fnv1a @Word256) word256s,
+      bgroup "SipHash-2-4 Word64/[Word256]" $ mkBenchNoHuge (sipHash @Word64 2 4 0xc0ffee) word256s
     ]
