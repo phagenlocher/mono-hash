@@ -13,6 +13,7 @@ where
 
 import Data.Bits (Bits (shiftL, shiftR, (.&.)))
 import Data.Char qualified as Char
+import Data.Int (Int16, Int32, Int64, Int8)
 import Data.WideWord.Word128 (Word128 (..))
 import Data.WideWord.Word256 (Word256 (..))
 import Data.Word (Word16, Word32, Word64, Word8)
@@ -21,6 +22,10 @@ import Data.Word (Word16, Word32, Word64, Word8)
 --
 -- The fold form is used instead of returning a list so that hashing does not
 -- allocate a list cell (and often a boxed number) for every input byte.
+--
+-- Fixed-width signed integers are hashed as their two's-complement bit
+-- pattern. For example, @Int8@ has the same bytes as the corresponding
+-- @Word8@.
 class ToWords a where
   -- | Strictly fold over the bytes of a value in hash-input order.
   --
@@ -49,9 +54,17 @@ instance ToWords Word8 where
   foldlWords f z w = f z w
   {-# INLINE foldlWords #-}
 
+instance ToWords Int8 where
+  foldlWords f z i = foldlWords f z (fromIntegral i :: Word8)
+  {-# INLINE foldlWords #-}
+
 instance ToWords Word16 where
   foldlWords f z w =
     f (f z (fromIntegral (w `shiftR` 8))) (fromIntegral w)
+  {-# INLINE foldlWords #-}
+
+instance ToWords Int16 where
+  foldlWords f z i = foldlWords f z (fromIntegral i :: Word16)
   {-# INLINE foldlWords #-}
 
 instance ToWords Word32 where
@@ -65,6 +78,10 @@ instance ToWords Word32 where
           (fromIntegral (w `shiftR` 8))
       )
       (fromIntegral w)
+  {-# INLINE foldlWords #-}
+
+instance ToWords Int32 where
+  foldlWords f z i = foldlWords f z (fromIntegral i :: Word32)
   {-# INLINE foldlWords #-}
 
 instance ToWords Word64 where
@@ -90,6 +107,10 @@ instance ToWords Word64 where
           (fromIntegral (w `shiftR` 8))
       )
       (fromIntegral w)
+  {-# INLINE foldlWords #-}
+
+instance ToWords Int64 where
+  foldlWords f z i = foldlWords f z (fromIntegral i :: Word64)
   {-# INLINE foldlWords #-}
 
 instance ToWords Word128 where
