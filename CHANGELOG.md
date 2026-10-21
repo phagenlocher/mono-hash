@@ -1,5 +1,7 @@
 # Revision history for mono-hash
 
-## 0.1.0.0 -- YYYY-mm-dd
+## 0.1.0.0 -- 2026-10-21
 
-* First version. Released on an unsuspecting world.
+* First release.
+* FNV-1 and FNV-1a for monomorphic containers.
+* SipHash-c-d and HalfSipHash-c-d for monomorphic containers.

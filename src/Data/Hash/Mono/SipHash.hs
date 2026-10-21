@@ -41,7 +41,7 @@ instance SipHashResult Word64 where
   finalization :: Word -> SipData -> Word64
   finalization d (SipData !v0 !v1 !v2 !v3) =
     let v2' = v2 `xor` 0xff
-        (SipData !v0' !v1' !v2'' !v3') = sipRoundN d (SipData v0 v1 v2' v3)
+        (SipData !v0' !v1' !v2'' !v3') = sipRounds d (SipData v0 v1 v2' v3)
      in word64ToLE $ v0' `xor` v1' `xor` v2'' `xor` v3'
 
 instance SipHashResult Word128 where
@@ -51,10 +51,10 @@ instance SipHashResult Word128 where
   finalization :: Word -> SipData -> Word128
   finalization d (SipData !v0 !v1 !v2 !v3) =
     let v2' = v2 `xor` 0xee
-        (SipData !v0' !v1' !v2'' !v3') = sipRoundN d (SipData v0 v1 v2' v3)
+        (SipData !v0' !v1' !v2'' !v3') = sipRounds d (SipData v0 v1 v2' v3)
         hi = word64ToLE $ v0' `xor` v1' `xor` v2'' `xor` v3'
         v1'' = v1' `xor` 0xdd
-        (SipData !v0'' !v1''' !v2''' !v3'') = sipRoundN d (SipData v0' v1'' v2'' v3')
+        (SipData !v0'' !v1''' !v2''' !v3'') = sipRounds d (SipData v0' v1'' v2'' v3')
         lo = word64ToLE $ v0'' `xor` v1''' `xor` v2''' `xor` v3''
      in Word128 hi lo
 
@@ -155,7 +155,7 @@ step c SipStream {ssData = d, ssWord = word, ssCount = n, ssLen = len} !b =
 compress :: Word -> SipData -> Word64 -> SipData
 compress c (SipData !v0 !v1 !v2 !v3) m =
   let v3' = v3 `xor` m
-      (SipData !v0' !v1' !v2' !v3'') = sipRoundN c (SipData v0 v1 v2 v3')
+      (SipData !v0' !v1' !v2' !v3'') = sipRounds c (SipData v0 v1 v2 v3')
       v0'' = v0' `xor` m
    in SipData v0'' v1' v2' v3''
 {-# INLINE compress #-}
@@ -181,7 +181,23 @@ sipRound (SipData !v0 !v1 !v2 !v3) =
 {-# INLINE sipRound #-}
 
 -- | Apply 'sipRound' @n@ times.
+--
+-- This is the general fallback. It is self-recursive, so GHC treats it as a
+-- loop breaker and never inlines or unrolls it, even when @n@ is a literal.
 sipRoundN :: Word -> SipData -> SipData
-sipRoundN n !x
-  | n <= 0 = x
-  | otherwise = sipRoundN (n - 1) $! sipRound x
+sipRoundN 0 !x = x
+sipRoundN n !x = sipRoundN (n - 1) $! sipRound x
+
+-- | Apply 'sipRound' @n@ times, with unrolled cases for the small counts used
+-- in practice (SipHash-2-4 uses 2 and 4).
+--
+-- Unlike 'sipRoundN' this function is not recursive, so the 'INLINE' pragma is
+-- honoured: calls with a small @n@ become straight-line code instead of a call
+-- to a loop. (When @n@ is a known literal the case can fold away as well.)
+sipRounds :: Word -> SipData -> SipData
+sipRounds 1 !x = sipRound x
+sipRounds 2 !x = sipRound (sipRound x)
+sipRounds 3 !x = sipRound (sipRound (sipRound x))
+sipRounds 4 !x = sipRound (sipRound (sipRound (sipRound x)))
+sipRounds n !x = sipRoundN n x
+{-# INLINE sipRounds #-}
