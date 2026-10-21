@@ -5,9 +5,6 @@ module Data.Hash.Mono.Internal
   ( ToWords (..),
     word64ToLE,
     word32ToLE,
-    mkWord16,
-    mkWord32,
-    mkWord64,
   )
 where
 
@@ -164,18 +161,3 @@ word32ToLE w =
         + (c2 `shiftL` 16)
         + (c3 `shiftL` 24)
 {-# INLINEABLE word32ToLE #-}
-
--- | Combine two bytes into a big-endian 'Word16' (high byte first).
-mkWord16 :: Word8 -> Word8 -> Word16
-mkWord16 hi lo = (fromIntegral hi `shiftL` 8) + fromIntegral lo
-{-# INLINE mkWord16 #-}
-
--- | Combine two 'Word16's into a big-endian 'Word32' (high half first).
-mkWord32 :: Word16 -> Word16 -> Word32
-mkWord32 hi lo = (fromIntegral hi `shiftL` 16) + fromIntegral lo
-{-# INLINE mkWord32 #-}
-
--- | Combine two 'Word32's into a big-endian 'Word64' (high half first).
-mkWord64 :: Word32 -> Word32 -> Word64
-mkWord64 hi lo = (fromIntegral hi `shiftL` 32) + fromIntegral lo
-{-# INLINE mkWord64 #-}

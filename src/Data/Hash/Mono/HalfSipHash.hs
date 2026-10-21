@@ -187,4 +187,3 @@ halfSipRoundN :: Word -> HalfSipData -> HalfSipData
 halfSipRoundN n !x
   | n <= 0 = x
   | otherwise = halfSipRoundN (n - 1) $! halfSipRound x
-{-# INLINE halfSipRoundN #-}

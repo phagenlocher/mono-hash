@@ -187,4 +187,3 @@ sipRoundN :: Word -> SipData -> SipData
 sipRoundN n !x
   | n <= 0 = x
   | otherwise = sipRoundN (n - 1) $! sipRound x
-{-# INLINE sipRoundN #-}

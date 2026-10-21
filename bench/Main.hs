@@ -16,51 +16,33 @@ import Data.WideWord.Word128 (Word128)
 import Data.WideWord.Word256 (Word256)
 import Data.Word (Word32, Word64)
 
-data Sizes a = Sizes
-  { sizeSmall :: a,
-    sizeMedium :: a,
-    sizeLarge :: a,
-    sizeHuge :: a
-  }
+newtype Sizes a = Sizes [(String, a)]
 
 mkSizes :: (Int -> a) -> Sizes a
 mkSizes f =
   Sizes
-    { sizeSmall = f 10,
-      sizeMedium = f 1000,
-      sizeLarge = f 100000,
-      sizeHuge = f 10000000
-    }
+    [ ("small input", f 10),
+      ("medium input", f 1000),
+      ("large input", f 100000),
+      ("huge input", f 10000000)
+    ]
 
 -- | Smaller sizes for element types with a large in-memory footprint.
 mkElementSizes :: (Int -> a) -> Sizes a
 mkElementSizes f =
   Sizes
-    { sizeSmall = f 100,
-      sizeMedium = f 1000,
-      sizeLarge = f 10000,
-      sizeHuge = f 0
-    }
+    [ ("small input", f 100),
+      ("medium input", f 1000),
+      ("large input", f 10000)
+    ]
 
 forceSizes :: (NFData a) => Sizes a -> IO (Sizes a)
-forceSizes sizes@(Sizes small medium large huge) = do
-  _ <- evaluate $ force (small, medium, large, huge)
+forceSizes sizes@(Sizes xs) = do
+  _ <- evaluate $ force xs
   pure sizes
 
 mkBench :: (a -> b) -> Sizes a -> [Benchmark]
-mkBench fun (Sizes small medium large huge) =
-  [ bench "small input" $ whnf fun small,
-    bench "medium input" $ whnf fun medium,
-    bench "large input" $ whnf fun large,
-    bench "huge input" $ whnf fun huge
-  ]
-
-mkBenchNoHuge :: (a -> b) -> Sizes a -> [Benchmark]
-mkBenchNoHuge fun (Sizes small medium large _) =
-  [ bench "small input" $ whnf fun small,
-    bench "medium input" $ whnf fun medium,
-    bench "large input" $ whnf fun large
-  ]
+mkBench fun (Sizes xs) = [bench name (whnf fun x) | (name, x) <- xs]
 
 main :: IO ()
 main = do
@@ -90,21 +72,21 @@ main = do
       bgroup "SipHash-2-4 Word128" $ mkBench (sipHash @Word128 2 4 0xc0ffee) strings,
       bgroup "HalfSipHash-2-4 Word32" $ mkBench (halfSipHash @Word32 2 4 0xc0ffee) strings,
       bgroup "HalfSipHash-2-4 Word64" $ mkBench (halfSipHash @Word64 2 4 0xc0ffee) strings,
-      bgroup "FNV1a Word64/ByteString" $ mkBenchNoHuge (fnv1a @Word64) bytes,
-      bgroup "FNV1a Word64/Text" $ mkBenchNoHuge (fnv1a @Word64) texts,
-      bgroup "SipHash-2-4 Word64/ByteString" $ mkBenchNoHuge (sipHash @Word64 2 4 0xc0ffee) bytes,
-      bgroup "SipHash-2-4 Word64/Text" $ mkBenchNoHuge (sipHash @Word64 2 4 0xc0ffee) texts,
-      bgroup "HalfSipHash-2-4 Word32/ByteString" $ mkBenchNoHuge (halfSipHash @Word32 2 4 0xc0ffee) bytes,
-      bgroup "HalfSipHash-2-4 Word32/Text" $ mkBenchNoHuge (halfSipHash @Word32 2 4 0xc0ffee) texts,
+      bgroup "FNV1a Word64/ByteString" $ mkBench (fnv1a @Word64) bytes,
+      bgroup "FNV1a Word64/Text" $ mkBench (fnv1a @Word64) texts,
+      bgroup "SipHash-2-4 Word64/ByteString" $ mkBench (sipHash @Word64 2 4 0xc0ffee) bytes,
+      bgroup "SipHash-2-4 Word64/Text" $ mkBench (sipHash @Word64 2 4 0xc0ffee) texts,
+      bgroup "HalfSipHash-2-4 Word32/ByteString" $ mkBench (halfSipHash @Word32 2 4 0xc0ffee) bytes,
+      bgroup "HalfSipHash-2-4 Word32/Text" $ mkBench (halfSipHash @Word32 2 4 0xc0ffee) texts,
       bgroup
         "SipHash-2-4 Word64 length boundary"
         [ bench (show n) $ whnf (sipHash @Word64 2 4 0xc0ffee) input
           | (n, input) <- boundaryInputs
         ],
-      bgroup "FNV1a Word64/[Word128]" $ mkBenchNoHuge (fnv1a @Word64) word128s,
-      bgroup "FNV1a Word256/[Word128]" $ mkBenchNoHuge (fnv1a @Word256) word128s,
-      bgroup "SipHash-2-4 Word64/[Word128]" $ mkBenchNoHuge (sipHash @Word64 2 4 0xc0ffee) word128s,
-      bgroup "FNV1a Word64/[Word256]" $ mkBenchNoHuge (fnv1a @Word64) word256s,
-      bgroup "FNV1a Word256/[Word256]" $ mkBenchNoHuge (fnv1a @Word256) word256s,
-      bgroup "SipHash-2-4 Word64/[Word256]" $ mkBenchNoHuge (sipHash @Word64 2 4 0xc0ffee) word256s
+      bgroup "FNV1a Word64/[Word128]" $ mkBench (fnv1a @Word64) word128s,
+      bgroup "FNV1a Word256/[Word128]" $ mkBench (fnv1a @Word256) word128s,
+      bgroup "SipHash-2-4 Word64/[Word128]" $ mkBench (sipHash @Word64 2 4 0xc0ffee) word128s,
+      bgroup "FNV1a Word64/[Word256]" $ mkBench (fnv1a @Word64) word256s,
+      bgroup "FNV1a Word256/[Word256]" $ mkBench (fnv1a @Word256) word256s,
+      bgroup "SipHash-2-4 Word64/[Word256]" $ mkBench (sipHash @Word64 2 4 0xc0ffee) word256s
     ]
