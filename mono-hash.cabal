@@ -17,6 +17,7 @@ common warnings
 
 library
   import: warnings
+  ghc-options: -O2
 
   exposed-modules:
     Data.Hash.Mono.FNV
@@ -28,7 +29,6 @@ library
   
   build-depends:
     base >=4.14.3.0 && <5,
-    containers >=0.6.4.1 && <0.9,
     mono-traversable ^>=1.0.21.0,
     wide-word ^>=0.1.7.0
 
@@ -75,11 +75,15 @@ benchmark mono-hash-bench
 
   default-language: Haskell2010
 
+  ghc-options: -O2
+
   main-is: Main.hs
 
   build-depends:
     base >=4.14.3.0 && <5,
+    bytestring,
     criterion,
     deepseq,
     mono-hash,
+    text,
     wide-word,
