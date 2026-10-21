@@ -40,7 +40,7 @@ instance HalfSipHashResult Word32 where
   finalization :: Word -> HalfSipData -> Word32
   finalization d (HalfSipData !v0 !v1 !v2 !v3) =
     let v2' = v2 `xor` 0xff
-        (HalfSipData !_ v1' _ !v3') = halfSipRoundN d (HalfSipData v0 v1 v2' v3)
+        (HalfSipData !_ v1' _ !v3') = halfSipRounds d (HalfSipData v0 v1 v2' v3)
      in word32ToLE $ v1' `xor` v3'
 
 instance HalfSipHashResult Word64 where
@@ -50,10 +50,10 @@ instance HalfSipHashResult Word64 where
   finalization :: Word -> HalfSipData -> Word64
   finalization d (HalfSipData !v0 !v1 !v2 !v3) =
     let v2' = v2 `xor` 0xee
-        (HalfSipData !v0' !v1' !v2'' !v3') = halfSipRoundN d (HalfSipData v0 v1 v2' v3)
+        (HalfSipData !v0' !v1' !v2'' !v3') = halfSipRounds d (HalfSipData v0 v1 v2' v3)
         hi = word32ToLE $ v1' `xor` v3'
         v1'' = v1' `xor` 0xdd
-        (HalfSipData _ !v1''' _ !v3'') = halfSipRoundN d (HalfSipData v0' v1'' v2'' v3')
+        (HalfSipData _ !v1''' _ !v3'') = halfSipRounds d (HalfSipData v0' v1'' v2'' v3')
         lo = word32ToLE $ v1''' `xor` v3''
      in (fromIntegral hi `shiftL` 32) + fromIntegral lo
 
@@ -155,7 +155,7 @@ step c HalfSipStream {hsData = d, hsWord = word, hsCount = n, hsLen = len} !b =
 compress :: Word -> HalfSipData -> Word32 -> HalfSipData
 compress c (HalfSipData !v0 !v1 !v2 !v3) m =
   let v3' = v3 `xor` m
-      (HalfSipData !v0' !v1' !v2' !v3'') = halfSipRoundN c (HalfSipData v0 v1 v2 v3')
+      (HalfSipData !v0' !v1' !v2' !v3'') = halfSipRounds c (HalfSipData v0 v1 v2 v3')
       v0'' = v0' `xor` m
    in HalfSipData v0'' v1' v2' v3''
 {-# INLINE compress #-}
@@ -181,7 +181,24 @@ halfSipRound (HalfSipData !v0 !v1 !v2 !v3) =
 {-# INLINE halfSipRound #-}
 
 -- | Apply 'halfSipRound' @n@ times.
+--
+-- This is the general fallback. It is self-recursive, so GHC treats it as a
+-- loop breaker and never inlines or unrolls it, even when @n@ is a literal.
 halfSipRoundN :: Word -> HalfSipData -> HalfSipData
-halfSipRoundN n !x
-  | n <= 0 = x
-  | otherwise = halfSipRoundN (n - 1) $! halfSipRound x
+halfSipRoundN 0 !x = x
+halfSipRoundN n !x = halfSipRoundN (n - 1) $! halfSipRound x
+
+-- | Apply 'halfSipRound' @n@ times, with unrolled cases for the small counts
+-- used in practice (HalfSipHash-2-4 uses 2 and 4).
+--
+-- Unlike 'halfSipRoundN' this function is not recursive, so the 'INLINE'
+-- pragma is honoured: calls with a small @n@ become straight-line code instead
+-- of a call to a loop. (When @n@ is a known literal the case can fold away as
+-- well.)
+halfSipRounds :: Word -> HalfSipData -> HalfSipData
+halfSipRounds 1 !x = halfSipRound x
+halfSipRounds 2 !x = halfSipRound (halfSipRound x)
+halfSipRounds 3 !x = halfSipRound (halfSipRound (halfSipRound x))
+halfSipRounds 4 !x = halfSipRound (halfSipRound (halfSipRound (halfSipRound x)))
+halfSipRounds n !x = halfSipRoundN n x
+{-# INLINE halfSipRounds #-}
