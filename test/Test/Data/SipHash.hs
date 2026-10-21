@@ -152,8 +152,8 @@ sipHash24VectorsForWord128 =
     0x5150d1772f50834a503e069a973fbd7c
   ]
 
--- | Vectors for 'boundaryInputs', generated from the pre-streaming
--- implementation.
+-- | Expected results for 'boundaryInputs', recorded before the streaming
+-- rewrite.
 boundaryVectorsForWord64 :: [Word64]
 boundaryVectorsForWord64 =
   [ 0xe551b8d1dec12800,

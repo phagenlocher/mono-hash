@@ -15,19 +15,18 @@ import Data.WideWord.Word128 (Word128 (..))
 import Data.WideWord.Word256 (Word256 (..))
 import Data.Word (Word16, Word32, Word64, Word8)
 
--- | Types that can be viewed as a sequence of bytes.
+-- | Types with a byte encoding for hashing.
 --
--- The fold form is used instead of returning a list so that hashing does not
--- allocate a list cell (and often a boxed number) for every input byte.
+-- A fold is used instead of returning a list so that hashing does not need to
+-- allocate a byte list.
 --
 -- Fixed-width signed integers are hashed as their two's-complement bit
--- pattern. For example, @Int8@ has the same bytes as the corresponding
--- @Word8@.
+-- pattern. For example, 'Int8' has the same bytes as the corresponding
+-- 'Word8'.
 class ToWords a where
-  -- | Strictly fold over the bytes of a value in hash-input order.
+  -- | Fold over the bytes of a value, most significant byte first.
   --
-  -- The accumulator is not forced by this function itself; callers that
-  -- need strictness should use a strict left fold.
+  -- The accumulator is not forced; use a strict left fold when hashing.
   foldlWords :: (b -> Word8 -> b) -> b -> a -> b
 
 instance ToWords Char where
@@ -128,7 +127,7 @@ instance ToWords Word256 where
       (word256lo w)
   {-# INLINE foldlWords #-}
 
--- | Reverse the byte order of a 'Word64'.
+-- | Byte-swap a 'Word64'; used to emit hash words in little-endian order.
 word64ToLE :: Word64 -> Word64
 word64ToLE w =
   let c0 = (w `shiftR` 56) .&. 0xff
@@ -149,7 +148,7 @@ word64ToLE w =
         + (c7 `shiftL` 56)
 {-# INLINEABLE word64ToLE #-}
 
--- | Reverse the byte order of a 'Word32'.
+-- | Byte-swap a 'Word32'; used to emit hash words in little-endian order.
 word32ToLE :: Word32 -> Word32
 word32ToLE w =
   let c0 = (w `shiftR` 24) .&. 0xff

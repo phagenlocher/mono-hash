@@ -2,11 +2,11 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
+
 -- | HalfSipHash-@c@-@d@ for any 'MonoFoldable' container.
 --
--- The implementation streams over the input one byte at a time and uses
--- constant memory. The output width is chosen by the type application; see
--- 'halfSipHash'.
+-- Input is consumed one byte at a time in constant space. The result width is
+-- chosen by the type application; see 'halfSipHash'.
 module Data.Hash.Mono.HalfSipHash
   ( HalfSipHashData,
     HalfSipHashResult,
@@ -23,12 +23,14 @@ import Data.MonoTraversable (Element, MonoFoldable (ofoldl'))
 import Data.Word (Word32, Word64, Word8)
 import Numeric (showHex)
 
--- | Supported HalfSipHash output widths.
+-- | Output widths that 'halfSipHash' can produce.
 class HalfSipHashResult a where
-  -- | Apply output-width-specific initialization to the hash state.
+  -- | Adjust the initial state for the selected output width. The 64-bit
+  -- output mixes a domain separator into the second state word; the 32-bit
+  -- output does not.
   initialize :: HalfSipData -> HalfSipData
 
-  -- | Run the finalization rounds and extract the result.
+  -- | Run the finalization rounds and return the hash.
   finalization :: Word -> HalfSipData -> a
 
 instance HalfSipHashResult Word32 where
@@ -57,19 +59,15 @@ instance HalfSipHashResult Word64 where
 
 -- | Constraint for containers that can be hashed with HalfSipHash.
 --
--- The container's element type must have a ToWords instance.
+-- Requires @ToWords@ for the element type.
 type HalfSipHashData a = (MonoFoldable a, ToWords (Element a))
 
 -- | HalfSipHash internal state, consisting of four 32-bit words.
 data HalfSipData = HalfSipData
   { hv0 :: {-# UNPACK #-} !Word32,
-    -- ^ First state word.
     hv1 :: {-# UNPACK #-} !Word32,
-    -- ^ Second state word.
     hv2 :: {-# UNPACK #-} !Word32,
-    -- ^ Third state word.
     hv3 :: {-# UNPACK #-} !Word32
-    -- ^ Fourth state word.
   }
 
 instance Show HalfSipData where
@@ -88,26 +86,26 @@ instance Show HalfSipData where
 
 -- | Streaming HalfSipHash state.
 --
--- The input is consumed one byte at a time. Once four bytes have been
--- buffered they are compressed into 'hsData', so hashing uses constant
--- memory regardless of input size.
+-- The input is consumed one byte at a time, so memory use is constant
+-- regardless of input size.
 data HalfSipStream = HalfSipStream
   { hsData :: {-# UNPACK #-} !HalfSipData,
     -- ^ Current hash state.
     hsWord :: {-# UNPACK #-} !Word32,
-    -- ^ Partial input word currently being assembled.
+    -- ^ Input bytes buffered so far, in little-endian order.
     hsCount :: {-# UNPACK #-} !Int,
     -- ^ Number of bytes buffered in 'hsWord' (0-3).
     hsLen :: {-# UNPACK #-} !Word8
-    -- ^ Number of input bytes seen modulo 256.
+    -- ^ Total number of input bytes, modulo 256.
   }
 
 -- | Compute HalfSipHash-@c@-@d@ of a monomorphic container.
 --
--- @c@ and @d@ are the compression and finalization round counts; HalfSipHash-2-4
--- is the common choice. The 64-bit key is split into two 32-bit halves.
+-- @c@ and @d@ are the compression and finalization round counts;
+-- HalfSipHash-2-4 is the standard variant. The 64-bit key is split into two
+-- 32-bit halves.
 --
--- The result width is selected by type application:
+-- For example:
 --
 -- @
 -- halfSipHash \@'Word32' 2 4 key input
@@ -143,7 +141,7 @@ halfSipHash c d key mono =
         }
 {-# INLINABLE halfSipHash #-}
 
--- | Feed one byte into the stream, compressing a full 32-bit word when needed.
+-- | Feed one input byte into the stream, compressing every full 32-bit word.
 step :: Word -> HalfSipStream -> Word8 -> HalfSipStream
 step c HalfSipStream {hsData = d, hsWord = word, hsCount = n, hsLen = len} !b =
   let word' = word .|. (fromIntegral b `shiftL` (8 * n))
@@ -153,7 +151,7 @@ step c HalfSipStream {hsData = d, hsWord = word, hsCount = n, hsLen = len} !b =
         else HalfSipStream {hsData = d, hsWord = word', hsCount = n + 1, hsLen = len'}
 {-# INLINE step #-}
 
--- | Compress one complete 32-bit input word into the hash state.
+-- | Compress one 32-bit input word into the hash state.
 compress :: Word -> HalfSipData -> Word32 -> HalfSipData
 compress c (HalfSipData !v0 !v1 !v2 !v3) m =
   let v3' = v3 `xor` m
@@ -162,7 +160,7 @@ compress c (HalfSipData !v0 !v1 !v2 !v3) m =
    in HalfSipData v0'' v1' v2' v3''
 {-# INLINE compress #-}
 
--- | One HalfSipHash round.
+-- | One full HalfSipHash round (two half-rounds).
 halfSipRound :: HalfSipData -> HalfSipData
 halfSipRound (HalfSipData !v0 !v1 !v2 !v3) =
   let v0' = v0 + v1
@@ -182,7 +180,7 @@ halfSipRound (HalfSipData !v0 !v1 !v2 !v3) =
    in HalfSipData v0''' v1'''' v2''' v3''''
 {-# INLINE halfSipRound #-}
 
--- | Apply HalfSipHash rounds @n@ times.
+-- | Apply 'halfSipRound' @n@ times.
 halfSipRoundN :: Word -> HalfSipData -> HalfSipData
 halfSipRoundN n !x
   | n <= 0 = x

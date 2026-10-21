@@ -25,8 +25,8 @@ import Test.Tasty.HUnit (testCase, (@?=))
 main :: IO ()
 main = defaultMain tests
 
--- | A string containing ASCII, one-byte non-ASCII, and multi-byte code
--- points.  The library hashes the code point's big-endian bytes.
+-- | Code points needing one, two, and three bytes in the hash encoding.
+-- The 'Char' instance emits each code point most significant byte first.
 charEncodingInput :: String
 charEncodingInput = "\x00\x7f\x80\xff\x100\x1234\x1F600"
 
@@ -59,8 +59,8 @@ word32Samples = [0x01020304, 0x05060708, 0xdeadbeef]
 word64Samples :: [Word64]
 word64Samples = [0x0102030405060708, 0x1112131415161718, 0xdeadbeefcafed00d]
 
--- | Signed samples cover the minimum, negative, zero, positive, and maximum
--- values for each fixed-width type.
+-- | Boundary values for each signed element type: minBound, -1, 0, 1,
+-- maxBound.
 int8Samples :: [Int8]
 int8Samples = [minBound, -1, 0, 1, maxBound]
 
@@ -73,7 +73,7 @@ int32Samples = [minBound, -1, 0, 1, maxBound]
 int64Samples :: [Int64]
 int64Samples = [minBound, -1, 0, 1, maxBound]
 
--- | Big-endian two's-complement bytes of 'int8Samples', etc.
+-- | Big-endian two's-complement encoding of the signed sample lists.
 int8SampleBytes :: BS.ByteString
 int8SampleBytes = BS.pack [0x80, 0xff, 0x00, 0x01, 0x7f]
 

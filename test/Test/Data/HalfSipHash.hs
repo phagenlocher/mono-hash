@@ -151,8 +151,8 @@ halfSipHash24VectorsForWord64 =
     0x2ea63c71bf326087
   ]
 
--- | Vectors for 'boundaryInputs', generated from the pre-streaming
--- implementation.
+-- | Expected results for 'boundaryInputs', recorded before the streaming
+-- rewrite.
 boundaryVectorsForWord32 :: [Word32]
 boundaryVectorsForWord32 =
   [ 0x4db2af8b,
