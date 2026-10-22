@@ -22,7 +22,6 @@ import Data.Hash.Mono.Internal
 import Data.MonoTraversable (Element, MonoFoldable (ofoldl'))
 import Data.WideWord.Word128 (Word128 (..))
 import Data.Word (Word64, Word8)
-import Numeric (showHex)
 
 -- | Output widths that 'sipHash' can produce.
 class SipHashResult a where
@@ -70,19 +69,6 @@ data SipData = SipData
     sv2 :: {-# UNPACK #-} !Word64,
     sv3 :: {-# UNPACK #-} !Word64
   }
-
-instance Show SipData where
-  show (SipData !v0 !v1 !v2 !v3) =
-    unwords
-      [ "v0",
-        showHex v0 "",
-        "v1",
-        showHex v1 "",
-        "v2",
-        showHex v2 "",
-        "v3",
-        showHex v3 ""
-      ]
 
 -- | Streaming SipHash state.
 --

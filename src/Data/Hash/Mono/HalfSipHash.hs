@@ -21,7 +21,6 @@ import Data.Hash.Mono.Internal
   )
 import Data.MonoTraversable (Element, MonoFoldable (ofoldl'))
 import Data.Word (Word32, Word64, Word8)
-import Numeric (showHex)
 
 -- | Output widths that 'halfSipHash' can produce.
 class HalfSipHashResult a where
@@ -69,20 +68,6 @@ data HalfSipData = HalfSipData
     hv2 :: {-# UNPACK #-} !Word32,
     hv3 :: {-# UNPACK #-} !Word32
   }
-
-instance Show HalfSipData where
-  show :: HalfSipData -> String
-  show (HalfSipData !v0 !v1 !v2 !v3) =
-    unwords
-      [ "v0",
-        showHex v0 "",
-        "v1",
-        showHex v1 "",
-        "v2",
-        showHex v2 "",
-        "v3",
-        showHex v3 ""
-      ]
 
 -- | Streaming HalfSipHash state.
 --
