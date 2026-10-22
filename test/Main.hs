@@ -116,6 +116,15 @@ word256Sample =
 tests :: TestTree
 tests =
   testGroup
+    "Tests"
+    [ goldenSamples,
+      inputEncoding
+    ]
+
+-- | Hashes must match published reference vectors.
+goldenSamples :: TestTree
+goldenSamples =
+  testGroup
     "Golden Samples"
     [ testGroup
         "FNV"
@@ -142,8 +151,51 @@ tests =
           testCase "FNV1  Word32 Lazy ByteString Char8" $ fmap (fnv1 @Word32) (Test.Data.FNV.inputs @BSLC.ByteString) @?= Test.Data.FNV.fnv1VectorsForWord32,
           testCase "FNV1a Word32 Lazy ByteString Char8" $ fmap (fnv1a @Word32) (Test.Data.FNV.inputs @BSLC.ByteString) @?= Test.Data.FNV.fnv1aVectorsForWord32,
           testCase "FNV1  Word64 Lazy ByteString Char8" $ fmap (fnv1 @Word64) (Test.Data.FNV.inputs @BSLC.ByteString) @?= Test.Data.FNV.fnv1VectorsForWord64,
-          testCase "FNV1a Word64 Lazy ByteString Char8" $ fmap (fnv1a @Word64) (Test.Data.FNV.inputs @BSLC.ByteString) @?= Test.Data.FNV.fnv1aVectorsForWord64,
-          testCase "FNV1a Word64 Char encoding matches bytes" $ do
+          testCase "FNV1a Word64 Lazy ByteString Char8" $ fmap (fnv1a @Word64) (Test.Data.FNV.inputs @BSLC.ByteString) @?= Test.Data.FNV.fnv1aVectorsForWord64
+        ],
+      testGroup
+        "SipHash"
+        [ testCase "SipHash-2-4 Word64 String" $ fmap (sipHash @Word64 2 4 Test.Data.SipHash.key) (Test.Data.SipHash.inputs @String) @?= Test.Data.SipHash.sipHash24VectorsForWord64,
+          testCase "SipHash-2-4 Word64 Text" $ fmap (sipHash @Word64 2 4 Test.Data.SipHash.key) (Test.Data.SipHash.inputs @Text) @?= Test.Data.SipHash.sipHash24VectorsForWord64,
+          testCase "SipHash-2-4 Word64 ByteString" $ fmap (sipHash @Word64 2 4 Test.Data.SipHash.key) (Test.Data.SipHash.inputs @BS.ByteString) @?= Test.Data.SipHash.sipHash24VectorsForWord64,
+          testCase "SipHash-2-4 Word64 Lazy ByteString" $ fmap (sipHash @Word64 2 4 Test.Data.SipHash.key) (Test.Data.SipHash.inputs @BSL.ByteString) @?= Test.Data.SipHash.sipHash24VectorsForWord64,
+          testCase "SipHash-2-4 Word64 ByteString Char8" $ fmap (sipHash @Word64 2 4 Test.Data.SipHash.key) (Test.Data.SipHash.inputs @BSC.ByteString) @?= Test.Data.SipHash.sipHash24VectorsForWord64,
+          testCase "SipHash-2-4 Word64 Lazy ByteString Char8" $ fmap (sipHash @Word64 2 4 Test.Data.SipHash.key) (Test.Data.SipHash.inputs @BSLC.ByteString) @?= Test.Data.SipHash.sipHash24VectorsForWord64,
+          testCase "SipHash-2-4 Word128 String" $ fmap (sipHash @Word128 2 4 Test.Data.SipHash.key) (Test.Data.SipHash.inputs @String) @?= Test.Data.SipHash.sipHash24VectorsForWord128,
+          testCase "SipHash-2-4 Word128 Text" $ fmap (sipHash @Word128 2 4 Test.Data.SipHash.key) (Test.Data.SipHash.inputs @Text) @?= Test.Data.SipHash.sipHash24VectorsForWord128,
+          testCase "SipHash-2-4 Word128 ByteString" $ fmap (sipHash @Word128 2 4 Test.Data.SipHash.key) (Test.Data.SipHash.inputs @BS.ByteString) @?= Test.Data.SipHash.sipHash24VectorsForWord128,
+          testCase "SipHash-2-4 Word128 Lazy ByteString" $ fmap (sipHash @Word128 2 4 Test.Data.SipHash.key) (Test.Data.SipHash.inputs @BSL.ByteString) @?= Test.Data.SipHash.sipHash24VectorsForWord128,
+          testCase "SipHash-2-4 Word128 ByteString Char8" $ fmap (sipHash @Word128 2 4 Test.Data.SipHash.key) (Test.Data.SipHash.inputs @BSC.ByteString) @?= Test.Data.SipHash.sipHash24VectorsForWord128,
+          testCase "SipHash-2-4 Word128 Lazy ByteString Char8" $ fmap (sipHash @Word128 2 4 Test.Data.SipHash.key) (Test.Data.SipHash.inputs @BSLC.ByteString) @?= Test.Data.SipHash.sipHash24VectorsForWord128,
+          testCase "SipHash-2-4 Word64 boundary lengths" $ fmap (sipHash @Word64 2 4 Test.Data.SipHash.key) Test.Data.SipHash.boundaryInputs @?= Test.Data.SipHash.boundaryVectorsForWord64
+        ],
+      testGroup
+        "HalfSipHash"
+        [ testCase "HalfSipHash-2-4 Word32 String" $ fmap (halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key) (Test.Data.HalfSipHash.inputs @String) @?= Test.Data.HalfSipHash.halfSipHash24VectorsForWord32,
+          testCase "HalfSipHash-2-4 Word32 Text" $ fmap (halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key) (Test.Data.HalfSipHash.inputs @Text) @?= Test.Data.HalfSipHash.halfSipHash24VectorsForWord32,
+          testCase "HalfSipHash-2-4 Word32 ByteString" $ fmap (halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key) (Test.Data.HalfSipHash.inputs @BS.ByteString) @?= Test.Data.HalfSipHash.halfSipHash24VectorsForWord32,
+          testCase "HalfSipHash-2-4 Word32 Lazy ByteString" $ fmap (halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key) (Test.Data.HalfSipHash.inputs @BSL.ByteString) @?= Test.Data.HalfSipHash.halfSipHash24VectorsForWord32,
+          testCase "HalfSipHash-2-4 Word32 ByteString Char8" $ fmap (halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key) (Test.Data.HalfSipHash.inputs @BSC.ByteString) @?= Test.Data.HalfSipHash.halfSipHash24VectorsForWord32,
+          testCase "HalfSipHash-2-4 Word32 Lazy ByteString Char8" $ fmap (halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key) (Test.Data.HalfSipHash.inputs @BSLC.ByteString) @?= Test.Data.HalfSipHash.halfSipHash24VectorsForWord32,
+          testCase "HalfSipHash-2-4 Word64 String" $ fmap (halfSipHash @Word64 2 4 Test.Data.HalfSipHash.key) (Test.Data.HalfSipHash.inputs @String) @?= Test.Data.HalfSipHash.halfSipHash24VectorsForWord64,
+          testCase "HalfSipHash-2-4 Word64 Text" $ fmap (halfSipHash @Word64 2 4 Test.Data.HalfSipHash.key) (Test.Data.HalfSipHash.inputs @Text) @?= Test.Data.HalfSipHash.halfSipHash24VectorsForWord64,
+          testCase "HalfSipHash-2-4 Word64 ByteString" $ fmap (halfSipHash @Word64 2 4 Test.Data.HalfSipHash.key) (Test.Data.HalfSipHash.inputs @BS.ByteString) @?= Test.Data.HalfSipHash.halfSipHash24VectorsForWord64,
+          testCase "HalfSipHash-2-4 Word64 Lazy ByteString" $ fmap (halfSipHash @Word64 2 4 Test.Data.HalfSipHash.key) (Test.Data.HalfSipHash.inputs @BSL.ByteString) @?= Test.Data.HalfSipHash.halfSipHash24VectorsForWord64,
+          testCase "HalfSipHash-2-4 Word64 ByteString Char8" $ fmap (halfSipHash @Word64 2 4 Test.Data.HalfSipHash.key) (Test.Data.HalfSipHash.inputs @BSC.ByteString) @?= Test.Data.HalfSipHash.halfSipHash24VectorsForWord64,
+          testCase "HalfSipHash-2-4 Word64 Lazy ByteString Char8" $ fmap (halfSipHash @Word64 2 4 Test.Data.HalfSipHash.key) (Test.Data.HalfSipHash.inputs @BSLC.ByteString) @?= Test.Data.HalfSipHash.halfSipHash24VectorsForWord64,
+          testCase "HalfSipHash-2-4 Word32 boundary lengths" $ fmap (halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key) Test.Data.HalfSipHash.boundaryInputs @?= Test.Data.HalfSipHash.boundaryVectorsForWord32
+        ]
+    ]
+
+-- | Every element type must feed the hash the same bytes its explicit
+-- byte encoding does, so typed inputs and byte inputs agree.
+inputEncoding :: TestTree
+inputEncoding =
+  testGroup
+    "Input Encoding"
+    [ testGroup
+        "FNV"
+        [ testCase "FNV1a Word64 Char encoding matches bytes" $ do
             let bytes = BS.pack (concatMap charBytes charEncodingInput)
             fnv1a @Word64 charEncodingInput @?= fnv1a @Word64 bytes
             fnv1a @Word64 (T.pack charEncodingInput) @?= fnv1a @Word64 bytes,
@@ -166,20 +218,7 @@ tests =
         ],
       testGroup
         "SipHash"
-        [ testCase "SipHash-2-4 Word64 String" $ fmap (sipHash @Word64 2 4 Test.Data.SipHash.key) (Test.Data.SipHash.inputs @String) @?= Test.Data.SipHash.sipHash24VectorsForWord64,
-          testCase "SipHash-2-4 Word64 Text" $ fmap (sipHash @Word64 2 4 Test.Data.SipHash.key) (Test.Data.SipHash.inputs @Text) @?= Test.Data.SipHash.sipHash24VectorsForWord64,
-          testCase "SipHash-2-4 Word64 ByteString" $ fmap (sipHash @Word64 2 4 Test.Data.SipHash.key) (Test.Data.SipHash.inputs @BS.ByteString) @?= Test.Data.SipHash.sipHash24VectorsForWord64,
-          testCase "SipHash-2-4 Word64 Lazy ByteString" $ fmap (sipHash @Word64 2 4 Test.Data.SipHash.key) (Test.Data.SipHash.inputs @BSL.ByteString) @?= Test.Data.SipHash.sipHash24VectorsForWord64,
-          testCase "SipHash-2-4 Word64 ByteString Char8" $ fmap (sipHash @Word64 2 4 Test.Data.SipHash.key) (Test.Data.SipHash.inputs @BSC.ByteString) @?= Test.Data.SipHash.sipHash24VectorsForWord64,
-          testCase "SipHash-2-4 Word64 Lazy ByteString Char8" $ fmap (sipHash @Word64 2 4 Test.Data.SipHash.key) (Test.Data.SipHash.inputs @BSLC.ByteString) @?= Test.Data.SipHash.sipHash24VectorsForWord64,
-          testCase "SipHash-2-4 Word128 String" $ fmap (sipHash @Word128 2 4 Test.Data.SipHash.key) (Test.Data.SipHash.inputs @String) @?= Test.Data.SipHash.sipHash24VectorsForWord128,
-          testCase "SipHash-2-4 Word128 Text" $ fmap (sipHash @Word128 2 4 Test.Data.SipHash.key) (Test.Data.SipHash.inputs @Text) @?= Test.Data.SipHash.sipHash24VectorsForWord128,
-          testCase "SipHash-2-4 Word128 ByteString" $ fmap (sipHash @Word128 2 4 Test.Data.SipHash.key) (Test.Data.SipHash.inputs @BS.ByteString) @?= Test.Data.SipHash.sipHash24VectorsForWord128,
-          testCase "SipHash-2-4 Word128 Lazy ByteString" $ fmap (sipHash @Word128 2 4 Test.Data.SipHash.key) (Test.Data.SipHash.inputs @BSL.ByteString) @?= Test.Data.SipHash.sipHash24VectorsForWord128,
-          testCase "SipHash-2-4 Word128 ByteString Char8" $ fmap (sipHash @Word128 2 4 Test.Data.SipHash.key) (Test.Data.SipHash.inputs @BSC.ByteString) @?= Test.Data.SipHash.sipHash24VectorsForWord128,
-          testCase "SipHash-2-4 Word128 Lazy ByteString Char8" $ fmap (sipHash @Word128 2 4 Test.Data.SipHash.key) (Test.Data.SipHash.inputs @BSLC.ByteString) @?= Test.Data.SipHash.sipHash24VectorsForWord128,
-          testCase "SipHash-2-4 Word64 boundary lengths" $ fmap (sipHash @Word64 2 4 Test.Data.SipHash.key) Test.Data.SipHash.boundaryInputs @?= Test.Data.SipHash.boundaryVectorsForWord64,
-          testCase "SipHash-2-4 Word64 Char encoding matches bytes" $ do
+        [ testCase "SipHash-2-4 Word64 Char encoding matches bytes" $ do
             let bytes = BS.pack (concatMap charBytes charEncodingInput)
             sipHash @Word64 2 4 Test.Data.SipHash.key charEncodingInput @?= sipHash @Word64 2 4 Test.Data.SipHash.key bytes
             sipHash @Word64 2 4 Test.Data.SipHash.key (T.pack charEncodingInput) @?= sipHash @Word64 2 4 Test.Data.SipHash.key bytes,
@@ -198,20 +237,7 @@ tests =
         ],
       testGroup
         "HalfSipHash"
-        [ testCase "HalfSipHash-2-4 Word32 String" $ fmap (halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key) (Test.Data.HalfSipHash.inputs @String) @?= Test.Data.HalfSipHash.halfSipHash24VectorsForWord32,
-          testCase "HalfSipHash-2-4 Word32 Text" $ fmap (halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key) (Test.Data.HalfSipHash.inputs @Text) @?= Test.Data.HalfSipHash.halfSipHash24VectorsForWord32,
-          testCase "HalfSipHash-2-4 Word32 ByteString" $ fmap (halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key) (Test.Data.HalfSipHash.inputs @BS.ByteString) @?= Test.Data.HalfSipHash.halfSipHash24VectorsForWord32,
-          testCase "HalfSipHash-2-4 Word32 Lazy ByteString" $ fmap (halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key) (Test.Data.HalfSipHash.inputs @BSL.ByteString) @?= Test.Data.HalfSipHash.halfSipHash24VectorsForWord32,
-          testCase "HalfSipHash-2-4 Word32 ByteString Char8" $ fmap (halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key) (Test.Data.HalfSipHash.inputs @BSC.ByteString) @?= Test.Data.HalfSipHash.halfSipHash24VectorsForWord32,
-          testCase "HalfSipHash-2-4 Word32 Lazy ByteString Char8" $ fmap (halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key) (Test.Data.HalfSipHash.inputs @BSLC.ByteString) @?= Test.Data.HalfSipHash.halfSipHash24VectorsForWord32,
-          testCase "HalfSipHash-2-4 Word64 String" $ fmap (halfSipHash @Word64 2 4 Test.Data.HalfSipHash.key) (Test.Data.HalfSipHash.inputs @String) @?= Test.Data.HalfSipHash.halfSipHash24VectorsForWord64,
-          testCase "HalfSipHash-2-4 Word64 Text" $ fmap (halfSipHash @Word64 2 4 Test.Data.HalfSipHash.key) (Test.Data.HalfSipHash.inputs @Text) @?= Test.Data.HalfSipHash.halfSipHash24VectorsForWord64,
-          testCase "HalfSipHash-2-4 Word64 ByteString" $ fmap (halfSipHash @Word64 2 4 Test.Data.HalfSipHash.key) (Test.Data.HalfSipHash.inputs @BS.ByteString) @?= Test.Data.HalfSipHash.halfSipHash24VectorsForWord64,
-          testCase "HalfSipHash-2-4 Word64 Lazy ByteString" $ fmap (halfSipHash @Word64 2 4 Test.Data.HalfSipHash.key) (Test.Data.HalfSipHash.inputs @BSL.ByteString) @?= Test.Data.HalfSipHash.halfSipHash24VectorsForWord64,
-          testCase "HalfSipHash-2-4 Word64 ByteString Char8" $ fmap (halfSipHash @Word64 2 4 Test.Data.HalfSipHash.key) (Test.Data.HalfSipHash.inputs @BSC.ByteString) @?= Test.Data.HalfSipHash.halfSipHash24VectorsForWord64,
-          testCase "HalfSipHash-2-4 Word64 Lazy ByteString Char8" $ fmap (halfSipHash @Word64 2 4 Test.Data.HalfSipHash.key) (Test.Data.HalfSipHash.inputs @BSLC.ByteString) @?= Test.Data.HalfSipHash.halfSipHash24VectorsForWord64,
-          testCase "HalfSipHash-2-4 Word32 boundary lengths" $ fmap (halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key) Test.Data.HalfSipHash.boundaryInputs @?= Test.Data.HalfSipHash.boundaryVectorsForWord32,
-          testCase "HalfSipHash-2-4 Word32 Char encoding matches bytes" $ do
+        [ testCase "HalfSipHash-2-4 Word32 Char encoding matches bytes" $ do
             let bytes = BS.pack (concatMap charBytes charEncodingInput)
             halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key charEncodingInput @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key bytes
             halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key (T.pack charEncodingInput) @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key bytes,
