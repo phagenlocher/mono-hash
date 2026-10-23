@@ -63,6 +63,17 @@ point.
 
 GHC 8.10.7 through 9.14.1.
 
+## Formatting and linting
+
+Sources are formatted with [fourmolu](https://github.com/fourmolu/fourmolu) (0.21.0.0)
+and linted with [hlint](https://github.com/ndmitchell/hlint) (3.10). CI checks
+both, so run them before opening a pull request:
+
+```console
+fourmolu --mode inplace $(git ls-files '*.hs')
+hlint src test bench
+```
+
 ## License
 
 BSD-3-Clause. See [LICENSE](LICENSE).
