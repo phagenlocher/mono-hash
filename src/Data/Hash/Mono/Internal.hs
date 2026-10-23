@@ -49,7 +49,7 @@ instance ToWords Char where
     {-# INLINE foldlWords #-}
 
 instance ToWords Word8 where
-    foldlWords f z w = f z w
+    foldlWords f = f
     {-# INLINE foldlWords #-}
 
 instance ToWords Int8 where

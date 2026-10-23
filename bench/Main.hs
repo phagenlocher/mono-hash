@@ -46,8 +46,8 @@ mkBench fun (Sizes xs) = [bench name (whnf fun x) | (name, x) <- xs]
 
 main :: IO ()
 main = do
-    strings <- forceSizes $ mkSizes (\n -> replicate n 'a')
-    bytes <- forceSizes $ mkSizes (\n -> BS.replicate n 97)
+    strings <- forceSizes $ mkSizes (`replicate` 'a')
+    bytes <- forceSizes $ mkSizes (`BS.replicate` 97)
     texts <- forceSizes $ mkSizes (\n -> T.replicate n (T.singleton 'a'))
     word128s <- forceSizes $ mkElementSizes (\n -> [fromIntegral i :: Word128 | i <- [0 .. n - 1]])
     word256s <- forceSizes $ mkElementSizes (\n -> [fromIntegral i :: Word256 | i <- [0 .. n - 1]])
