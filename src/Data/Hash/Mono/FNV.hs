@@ -1,14 +1,15 @@
 {-# LANGUAGE BangPatterns #-}
 
--- | FNV-1 and FNV-1a hashes for any 'MonoFoldable' container.
---
--- The result width is chosen by the type application; see 'fnv1' and 'fnv1a'.
-module Data.Hash.Mono.FNV
-  ( FNVData,
+{- | FNV-1 and FNV-1a hashes for any 'MonoFoldable' container.
+
+The result width is chosen by the type application; see 'fnv1' and 'fnv1a'.
+-}
+module Data.Hash.Mono.FNV (
+    FNVData,
     FNVResult,
     fnv1,
     fnv1a,
-  )
+)
 where
 
 import Data.Bits (Bits (xor))
@@ -20,61 +21,65 @@ import Data.Word (Word32, Word64, Word8)
 
 -- | Offset basis and prime for an FNV output width.
 class HasFNVBasis a where
-  -- | Offset basis used to seed the hash.
-  fnvOffsetBasis :: a
+    -- | Offset basis used to seed the hash.
+    fnvOffsetBasis :: a
 
-  -- | Prime applied once per input byte.
-  fnvPrime :: a
+    -- | Prime applied once per input byte.
+    fnvPrime :: a
 
 instance HasFNVBasis Word32 where
-  fnvOffsetBasis :: Word32
-  fnvOffsetBasis = 2166136261
+    fnvOffsetBasis :: Word32
+    fnvOffsetBasis = 2166136261
 
-  fnvPrime :: Word32
-  fnvPrime = 16777619
+    fnvPrime :: Word32
+    fnvPrime = 16777619
 
 instance HasFNVBasis Word64 where
-  fnvOffsetBasis :: Word64
-  fnvOffsetBasis = 14695981039346656037
+    fnvOffsetBasis :: Word64
+    fnvOffsetBasis = 14695981039346656037
 
-  fnvPrime :: Word64
-  fnvPrime = 1099511628211
+    fnvPrime :: Word64
+    fnvPrime = 1099511628211
 
 instance HasFNVBasis Word128 where
-  fnvOffsetBasis :: Word128
-  fnvOffsetBasis = 144066263297769815596495629667062367629
+    fnvOffsetBasis :: Word128
+    fnvOffsetBasis = 144066263297769815596495629667062367629
 
-  fnvPrime :: Word128
-  fnvPrime = 309485009821345068724781371
+    fnvPrime :: Word128
+    fnvPrime = 309485009821345068724781371
 
 instance HasFNVBasis Word256 where
-  fnvOffsetBasis :: Word256
-  fnvOffsetBasis = 100029257958052580907070968620625704837092796014241193945225284501741471925557
+    fnvOffsetBasis :: Word256
+    fnvOffsetBasis = 100029257958052580907070968620625704837092796014241193945225284501741471925557
 
-  fnvPrime :: Word256
-  fnvPrime = 374144419156711147060143317175368453031918731002211
+    fnvPrime :: Word256
+    fnvPrime = 374144419156711147060143317175368453031918731002211
 
--- | Constraint for types that can be used as an FNV result.
---
--- Instances: 'Word32', 'Word64', 'Word128', and 'Word256'.
+{- | Constraint for types that can be used as an FNV result.
+
+Instances: 'Word32', 'Word64', 'Word128', and 'Word256'.
+-}
 type FNVResult a = (HasFNVBasis a, Bits a, Num a)
 
--- | Constraint for containers that can be hashed with FNV.
---
--- Requires @ToWords@ for the element type.
+{- | Constraint for containers that can be hashed with FNV.
+
+Requires @ToWords@ for the element type.
+-}
 type FNVData a = (MonoFoldable a, ToWords (Element a))
 
--- | Shared implementation of 'fnv1' and 'fnv1a'; they differ only in the
--- round function.
+{- | Shared implementation of 'fnv1' and 'fnv1a'; they differ only in the
+round function.
+-}
 fnvGeneric :: forall result mono. (FNVData mono, FNVResult result) => (result -> Word8 -> result) -> mono -> result
 fnvGeneric fnvRound = ofoldl' (foldlWords fnvRound) fnvOffsetBasis
 {-# INLINE fnvGeneric #-}
 
--- | FNV-1 hash of a monomorphic container.
---
--- @
--- fnv1 \@'Word64' \"hello\"
--- @
+{- | FNV-1 hash of a monomorphic container.
+
+@
+fnv1 \@'Word64' \"hello\"
+@
+-}
 fnv1 :: forall result mono. (FNVData mono, FNVResult result) => mono -> result
 fnv1 = fnvGeneric fnvRound
   where
@@ -82,11 +87,12 @@ fnv1 = fnvGeneric fnvRound
     fnvRound !acc !octet = (acc * fnvPrime) `xor` fromIntegral octet
 {-# INLINEABLE fnv1 #-}
 
--- | FNV-1a hash of a monomorphic container.
---
--- @
--- fnv1a \@'Word64' \"hello\"
--- @
+{- | FNV-1a hash of a monomorphic container.
+
+@
+fnv1a \@'Word64' \"hello\"
+@
+-}
 fnv1a :: forall result mono. (FNVData mono, FNVResult result) => mono -> result
 fnv1a = fnvGeneric fnvRound
   where
