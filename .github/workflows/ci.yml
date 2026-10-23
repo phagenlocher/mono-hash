@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  - push
+  - pull_request
+  - merge_group
+  - workflow_dispatch
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    name: fourmolu
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install fourmolu
+        run: ghcup install fourmolu 0.21.0.0 --set
+      - name: Check formatting
+        run: fourmolu --mode check $(git ls-files '*.hs')
+
+  hlint:
+    name: hlint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install hlint
+        run: ghcup install hlint 3.10 --set
+      - name: Run hlint
+        run: hlint src test bench
+
+  test:
+    name: test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: haskell-actions/setup@v2
+        with:
+          ghc-version: "9.10.3"
+          cabal-version: "3.16.1.0"
+      - name: Restore cabal store
+        uses: actions/cache@v4
+        with:
+          path: ~/.cabal/store
+          key: ${{ runner.os }}-ghc-9.10.3-${{ hashFiles('mono-hash.cabal') }}
+          restore-keys: ${{ runner.os }}-ghc-9.10.3-
+      - name: Run tests
+        run: cabal test all --test-show-details=direct
