@@ -74,12 +74,12 @@ test-suite mono-hash-test
 
   build-depends:
     base >=4.14.3.0 && <5,
-    bytestring,
+    bytestring >=0.10 && <0.13,
     mono-hash,
-    tasty,
-    tasty-hunit,
-    text,
-    wide-word,
+    tasty >=1.4 && <1.6,
+    tasty-hunit >=0.10 && <0.11,
+    text >=1.2 && <2.2,
+    wide-word >=0.1.7 && <0.2,
 
 benchmark mono-hash-bench
   type: exitcode-stdio-1.0
@@ -94,9 +94,9 @@ benchmark mono-hash-bench
 
   build-depends:
     base >=4.14.3.0 && <5,
-    bytestring,
-    criterion,
-    deepseq,
+    bytestring >=0.10 && <0.13,
+    criterion >=1.5 && <1.7,
+    deepseq >=1.4 && <1.6,
     mono-hash,
-    text,
-    wide-word,
+    text >=1.2 && <2.2,
+    wide-word >=0.1.7 && <0.2,
