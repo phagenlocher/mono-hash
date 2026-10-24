@@ -17,6 +17,7 @@ import qualified Data.Text.Encoding as TE
 import Data.WideWord.Word128 (Word128)
 import Data.WideWord.Word256 (Word256)
 import Data.Word (Word16, Word32, Word64, Word8)
+import qualified Test.Data.ByteFoldable
 import qualified Test.Data.FNV
 import qualified Test.Data.HalfSipHash
 import qualified Test.Data.SipHash
@@ -174,6 +175,7 @@ tests =
         [ goldenSamples
         , inputEncoding
         , encodingCollisions
+        , Test.Data.ByteFoldable.tests
         ]
 
 {- | Hashes must match the reference vectors in 'Test.Data.SipHash',

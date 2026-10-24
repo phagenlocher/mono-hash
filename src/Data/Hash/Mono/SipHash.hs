@@ -15,10 +15,8 @@ module Data.Hash.Mono.SipHash (
 where
 
 import Data.Bits (Bits (rotateL, shiftL, xor, (.|.)))
-import Data.Hash.Mono.Internal (
-    ToWords (..),
-    byteSwap64,
- )
+import Data.Hash.Mono.Internal (byteSwap64)
+import Data.Hash.Mono.Internal.ByteFoldable (ByteFoldable (..))
 import Data.MonoTraversable (Element, MonoFoldable (ofoldl'))
 import Data.WideWord.Word128 (Word128 (..))
 import Data.Word (Word64, Word8)
@@ -56,7 +54,7 @@ instance SipHashResult Word128 where
          in Word128 word1 word0
 
 -- | Constraint synonym for containers hashed with SipHash.
-type SipHashData a = (MonoFoldable a, ToWords (Element a))
+type SipHashData a = (MonoFoldable a, ByteFoldable (Element a))
 
 -- | SipHash internal state, consisting of four 64-bit words.
 data SipData = SipData
@@ -96,7 +94,7 @@ entry of the reference @vectors_sip64@.
 -}
 sipHash :: forall result mono. (SipHashData mono, SipHashResult result) => Word -> Word -> Word128 -> mono -> result
 sipHash c d key mono =
-    case ofoldl' (foldlWords (step c)) initStream mono of
+    case ofoldl' (foldlBytes (step c)) initStream mono of
         SipStream{ssData = state, ssWord = word, ssLen = len} ->
             finalization d (compress c state (word .|. (fromIntegral len `shiftL` 56)))
   where

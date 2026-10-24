@@ -14,7 +14,7 @@ module Data.Hash.Mono.FNV (
 where
 
 import Data.Bits (Bits (xor))
-import Data.Hash.Mono.Internal (ToWords (..))
+import Data.Hash.Mono.Internal.ByteFoldable (ByteFoldable (..))
 import Data.MonoTraversable (Element, MonoFoldable (ofoldl'))
 import Data.WideWord.Word128 (Word128)
 import Data.WideWord.Word256 (Word256)
@@ -60,13 +60,13 @@ instance HasFNVBasis Word256 where
 type FNVResult a = (HasFNVBasis a, Bits a, Num a)
 
 -- | Constraint synonym for containers hashed with FNV.
-type FNVData a = (MonoFoldable a, ToWords (Element a))
+type FNVData a = (MonoFoldable a, ByteFoldable (Element a))
 
 {- | Shared implementation of 'fnv1' and 'fnv1a'; they differ only in the
 round function.
 -}
 fnvGeneric :: forall result mono. (FNVData mono, FNVResult result) => (result -> Word8 -> result) -> mono -> result
-fnvGeneric fnvRound = ofoldl' (foldlWords fnvRound) fnvOffsetBasis
+fnvGeneric fnvRound = ofoldl' (foldlBytes fnvRound) fnvOffsetBasis
 {-# INLINE fnvGeneric #-}
 
 {- | FNV-1 hash of a monomorphic container.

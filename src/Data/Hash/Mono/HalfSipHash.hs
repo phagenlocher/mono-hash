@@ -15,10 +15,8 @@ module Data.Hash.Mono.HalfSipHash (
 where
 
 import Data.Bits (Bits (rotateL, shiftL, shiftR, xor, (.&.), (.|.)))
-import Data.Hash.Mono.Internal (
-    ToWords (..),
-    byteSwap32,
- )
+import Data.Hash.Mono.Internal (byteSwap32)
+import Data.Hash.Mono.Internal.ByteFoldable (ByteFoldable (..))
 import Data.MonoTraversable (Element, MonoFoldable (ofoldl'))
 import Data.Word (Word32, Word64, Word8)
 
@@ -55,7 +53,7 @@ instance HalfSipHashResult Word64 where
          in (fromIntegral word1 `shiftL` 32) + fromIntegral word0
 
 -- | Constraint synonym for containers hashed with HalfSipHash.
-type HalfSipHashData a = (MonoFoldable a, ToWords (Element a))
+type HalfSipHashData a = (MonoFoldable a, ByteFoldable (Element a))
 
 -- | HalfSipHash internal state, consisting of four 32-bit words.
 data HalfSipData = HalfSipData
@@ -95,7 +93,7 @@ bytes @a9 35 9f 5b@ are the first entry of the reference
 -}
 halfSipHash :: forall result mono. (HalfSipHashData mono, HalfSipHashResult result) => Word -> Word -> Word64 -> mono -> result
 halfSipHash c d key mono =
-    case ofoldl' (foldlWords (step c)) initStream mono of
+    case ofoldl' (foldlBytes (step c)) initStream mono of
         HalfSipStream{hsData = state, hsWord = word, hsLen = len} ->
             finalization d (compress c state (word .|. (fromIntegral len `shiftL` 24)))
   where

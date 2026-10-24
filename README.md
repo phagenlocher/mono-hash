@@ -56,7 +56,7 @@ The result width is selected with a type application:
 | `sipHash`      | `Word64`, `Word128`                       |
 | `halfSipHash`  | `Word32`, `Word64`                        |
 
-Element types with a `ToWords` instance are `Word8`, `Word16`, `Word32`,
+Element types with a `ByteFoldable` instance are `Word8`, `Word16`, `Word32`,
 `Word64`, `Word128`, `Word256`, `Int8`, `Int16`, `Int32`, `Int64`, and
 `Char`. Signed integers are encoded as their two's-complement bit pattern,
 and multi-byte integers most significant byte first. `Char` is encoded as
@@ -64,6 +64,35 @@ UTF-8, so `String` and `Text` hash the same bytes as their UTF-8 encoding. A
 lone surrogate `Char`, which `String` can contain, uses the 3-byte
 [WTF-8](https://simonsapin.github.io/wtf-8/) form; `Text` replaces lone
 surrogates with `U+FFFD`, so the two may differ for such input.
+
+## Custom element types
+
+Containers of your own element types can be hashed by giving the element type
+a `ByteFoldable` instance from `Data.Hash.Mono.Internal.ByteFoldable`. The
+module sits under `Internal` because it describes the encoding layer rather
+than a hash algorithm, but the class is the supported way to extend the
+library:
+
+```haskell
+import Data.Hash.Mono.FNV (fnv1a)
+import Data.Hash.Mono.Internal.ByteFoldable (ByteFoldable (..))
+import Data.Word (Word8, Word64)
+
+data Rgb = Rgb !Word8 !Word8 !Word8
+
+instance ByteFoldable Rgb where
+    foldlBytes f z (Rgb r g b) = f (f (f z r) g) b
+
+-- Hashes [Rgb 0x12 0x34 0x56] as the bytes 0x12 0x34 0x56.
+fnv1a @Word64 [Rgb 0x12 0x34 0x56]
+```
+
+`foldlBytes` folds over the bytes in the order the hash consumes them, so the
+encoding is defined by the instance: emit bytes most significant first, and do
+not depend on the accumulator. The encoding is part of the hash contract.
+Changing an instance changes every hash of every container holding that
+element type, so do not change it if hash values are persisted or compared
+across versions.
 
 ## Encoding and byte order
 

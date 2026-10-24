@@ -4,6 +4,10 @@
 
 * Export `HasFNVBasis` so the supported FNV result widths appear in the
   generated documentation.
+* Expose the element byte-encoding class as
+  `Data.Hash.Mono.Internal.ByteFoldable.ByteFoldable` (method `foldlBytes`),
+  so containers of user-defined element types can be hashed. The class was
+  previously unreachable as `ToWords` in the hidden internal module.
 
 ## 0.1.0.0 -- 2026-10-21
 

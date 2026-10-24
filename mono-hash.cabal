@@ -36,8 +36,9 @@ library
 
   exposed-modules:
     Data.Hash.Mono.FNV
-    Data.Hash.Mono.SipHash
     Data.Hash.Mono.HalfSipHash
+    Data.Hash.Mono.Internal.ByteFoldable
+    Data.Hash.Mono.SipHash
   
   other-modules:
     Data.Hash.Mono.Internal
@@ -64,6 +65,7 @@ test-suite mono-hash-test
   default-language: Haskell2010
 
   other-modules: 
+    Test.Data.ByteFoldable
     Test.Data.FNV
     Test.Data.SipHash
     Test.Data.HalfSipHash
