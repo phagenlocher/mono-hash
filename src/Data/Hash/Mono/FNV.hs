@@ -1,13 +1,10 @@
 {-# LANGUAGE BangPatterns #-}
 
-{- | FNV-1 and FNV-1a hashes for any 'MonoFoldable' container.
-
-The result width is chosen by the type application; see 'fnv1' and 'fnv1a'.
--}
+-- | FNV-1 and FNV-1a hashes for any 'MonoFoldable' container.
 module Data.Hash.Mono.FNV (
     FNVData,
     FNVResult,
-    HasFNVBasis (..),
+    HasFNVBasis,
     fnv1,
     fnv1a,
 )
@@ -59,18 +56,16 @@ instance HasFNVBasis Word256 where
 -- | Constraint for types that can be used as an FNV result.
 type FNVResult a = (HasFNVBasis a, Bits a, Num a)
 
--- | Constraint synonym for containers hashed with FNV.
+-- | Constraint for containers hashed with FNV.
 type FNVData a = (MonoFoldable a, ByteFoldable (Element a))
 
-{- | Shared implementation of 'fnv1' and 'fnv1a'; they differ only in the
-round function.
--}
 fnvGeneric :: forall result mono. (FNVData mono, FNVResult result) => (result -> Word8 -> result) -> mono -> result
 fnvGeneric fnvRound = ofoldl' (foldlBytes fnvRound) fnvOffsetBasis
 {-# INLINE fnvGeneric #-}
 
 {- | FNV-1 hash of a monomorphic container.
 
+Example:
 @
 fnv1 \@'Word64' \"hello\"
 @
@@ -84,6 +79,7 @@ fnv1 = fnvGeneric fnvRound
 
 {- | FNV-1a hash of a monomorphic container.
 
+Example:
 @
 fnv1a \@'Word64' \"hello\"
 @

@@ -1,12 +1,6 @@
 {-# LANGUAGE InstanceSigs #-}
 
-{- | Types with a byte encoding for hashing.
-
-This module is exposed so that container elements of user-defined types can
-be hashed by giving them a 'ByteFoldable' instance. It is named under
-@Data.Hash.Mono.Internal@ because it describes the encoding layer rather than
-a hash algorithm; the rest of "Data.Hash.Mono.Internal" is not exposed.
--}
+-- | Byte encoding for types.
 module Data.Hash.Mono.Internal.ByteFoldable (
     ByteFoldable (..),
 )
@@ -19,33 +13,25 @@ import Data.WideWord.Word128 (Word128 (..))
 import Data.WideWord.Word256 (Word256 (..))
 import Data.Word (Word16, Word32, Word64, Word8)
 
-{- | Types with a byte encoding for hashing.
+{- | Types with a fixed byte encoding.
 
-Fixed-width integers are encoded most significant byte first; signed
-integers as their two's-complement bit pattern. For example, 'Int8' has
-the same bytes as the corresponding 'Word8'. 'Char' is encoded as UTF-8,
-so 'String' and @Text@ hash the same bytes as their UTF-8 encoding. Lone
-surrogate code points, which 'Char' can represent, use the 3-byte
-<https://simonsapin.github.io/wtf-8/ WTF-8> form; that keeps the encoding
-injective and total, but note that @Text@ replaces lone
-surrogates with @U+FFFD@, so a 'String' and a @Text@ containing one encode
-differently. 'Word8' contributes its byte unchanged, so byte strings are
-hashed as their raw bytes.
-
-An instance defines a fixed byte stream: the bytes must not depend on the
-accumulation function or the initial accumulator, and they are the bytes
-the hash is computed over. Changing an instance therefore changes every
-hash of every container holding that element type, which matters if hash
-values are persisted.
+An instance must define a fixed order for the bytes to be folded.
 -}
 class ByteFoldable a where
-    {- | Fold over the bytes of a value in the order the hash consumes them.
-
-    Multi-byte integers are emitted most significant byte first. The
-    accumulator is not forced; use a strict left fold when hashing.
-    -}
+    -- | Fold over the bytes of a value.
     foldlBytes :: (b -> Word8 -> b) -> b -> a -> b
 
+{- | 'Char' is encoded as
+<https://wtf-8.codeberg.page WTF-8>, the UTF-8 encoding extended to
+lone surrogates. For all other code points the bytes are ordinary UTF-8.
+
+'Char' can represent lone surrogates, which strict UTF-8 cannot encode.
+Replacing them, as @Text@ does with @U+FFFD@, would be lossy and would let
+distinct strings produce the same bytes. WTF-8 instead uses the ordinary
+three-byte shape for them, so every 'Char' has an encoding, the encoding
+stays injective, and valid text remains plain UTF-8. A 'String' and a
+@Text@ containing a lone surrogate therefore encode differently.
+-}
 instance ByteFoldable Char where
     foldlBytes f z c
         | n < 0x80 = f z (fromIntegral n)
@@ -79,19 +65,27 @@ instance ByteFoldable Word8 where
     foldlBytes f = f
     {-# INLINE foldlBytes #-}
 
+{- | Encoded as its two's-complement bit pattern, the same bytes as the
+corresponding 'Word8'.
+-}
 instance ByteFoldable Int8 where
     foldlBytes f z i = foldlBytes f z (fromIntegral i :: Word8)
     {-# INLINE foldlBytes #-}
 
+-- | Encoded as two bytes, most significant first.
 instance ByteFoldable Word16 where
     foldlBytes f z w =
         f (f z (fromIntegral (w `shiftR` 8))) (fromIntegral w)
     {-# INLINE foldlBytes #-}
 
+{- | Encoded as its two's-complement bit pattern, the same bytes as the
+corresponding 'Word16'.
+-}
 instance ByteFoldable Int16 where
     foldlBytes f z i = foldlBytes f z (fromIntegral i :: Word16)
     {-# INLINE foldlBytes #-}
 
+-- | Encoded as four bytes, most significant first.
 instance ByteFoldable Word32 where
     foldlBytes f z w =
         f
@@ -105,10 +99,14 @@ instance ByteFoldable Word32 where
             (fromIntegral w)
     {-# INLINE foldlBytes #-}
 
+{- | Encoded as its two's-complement bit pattern, the same bytes as the
+corresponding 'Word32'.
+-}
 instance ByteFoldable Int32 where
     foldlBytes f z i = foldlBytes f z (fromIntegral i :: Word32)
     {-# INLINE foldlBytes #-}
 
+-- | Encoded as eight bytes, most significant first.
 instance ByteFoldable Word64 where
     foldlBytes f z w =
         f
@@ -134,15 +132,20 @@ instance ByteFoldable Word64 where
             (fromIntegral w)
     {-# INLINE foldlBytes #-}
 
+{- | Encoded as its two's-complement bit pattern, the same bytes as the
+corresponding 'Word64'.
+-}
 instance ByteFoldable Int64 where
     foldlBytes f z i = foldlBytes f z (fromIntegral i :: Word64)
     {-# INLINE foldlBytes #-}
 
+-- | Encoded as sixteen bytes, most significant first.
 instance ByteFoldable Word128 where
     foldlBytes f z w =
         foldlBytes f (foldlBytes f z (word128Hi64 w)) (word128Lo64 w)
     {-# INLINE foldlBytes #-}
 
+-- | Encoded as thirty-two bytes, most significant first.
 instance ByteFoldable Word256 where
     foldlBytes f z w =
         foldlBytes

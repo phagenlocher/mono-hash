@@ -1,13 +1,9 @@
 cabal-version: 3.0
 name: mono-hash
 version: 0.1.0.0
-synopsis: FNV, SipHash, and HalfSipHash hashing for monomorphic containers
+synopsis: Hashing for monomorphic containers.
 description:
-  Hashing for monomorphic containers.
-  .
-  Provides FNV-1/FNV-1a, SipHash, and HalfSipHash for any
-  'MonoFoldable' container without allocating an intermediate
-  byte string.
+  FNV, SipHash, and HalfSipHash hashing for monomorphic containers.
 license: BSD-3-Clause
 license-file: LICENSE
 author: Philipp Hagenlocher
@@ -39,10 +35,10 @@ library
     Data.Hash.Mono.HalfSipHash
     Data.Hash.Mono.Internal.ByteFoldable
     Data.Hash.Mono.SipHash
-  
+
   other-modules:
     Data.Hash.Mono.Internal
-  
+
   build-depends:
     base >=4.14.3.0 && <5,
     mono-traversable >=1.0.21 && <1.1,
@@ -64,7 +60,7 @@ test-suite mono-hash-test
 
   default-language: Haskell2010
 
-  other-modules: 
+  other-modules:
     Test.Data.ByteFoldable
     Test.Data.FNV
     Test.Data.SipHash

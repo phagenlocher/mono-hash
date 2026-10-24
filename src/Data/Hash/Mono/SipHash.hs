@@ -3,10 +3,7 @@
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
 
-{- | SipHash-@c@-@d@ for any 'MonoFoldable' container.
-
-The result width is chosen by the type application; see 'sipHash'.
--}
+-- | SipHash-@c@-@d@ for any 'MonoFoldable' container.
 module Data.Hash.Mono.SipHash (
     SipHashData,
     SipHashResult,
@@ -21,9 +18,9 @@ import Data.MonoTraversable (Element, MonoFoldable (ofoldl'))
 import Data.WideWord.Word128 (Word128 (..))
 import Data.Word (Word64, Word8)
 
--- | Result widths that 'sipHash' can produce.
+-- | Result types that 'sipHash' can produce.
 class SipHashResult a where
-    -- | Adjust the initial state for the selected result width.
+    -- | Adjust the initial state for the selected result type.
     initialize :: SipData -> SipData
 
     -- | Run the finalization rounds and return the hash.
@@ -53,10 +50,10 @@ instance SipHashResult Word128 where
             word1 = v0'' `xor` v1''' `xor` v2''' `xor` v3''
          in Word128 word1 word0
 
--- | Constraint synonym for containers hashed with SipHash.
+-- | Constraint for containers hashable with SipHash.
 type SipHashData a = (MonoFoldable a, ByteFoldable (Element a))
 
--- | SipHash internal state, consisting of four 64-bit words.
+-- | SipHash internal state.
 data SipData = SipData
     { sv0 :: {-# UNPACK #-} !Word64
     , sv1 :: {-# UNPACK #-} !Word64
@@ -67,10 +64,11 @@ data SipData = SipData
 -- | Internal SipHash accumulator.
 data SipStream = SipStream
     { ssData :: {-# UNPACK #-} !SipData
+    -- ^ SipHash state.
     , ssWord :: {-# UNPACK #-} !Word64
     -- ^ Input bytes buffered so far, in little-endian order.
     , ssCount :: {-# UNPACK #-} !Int
-    -- ^ Number of bytes buffered in 'ssWord' (0-7).
+    -- ^ Number of bytes buffered in 'ssWord'.
     , ssLen :: {-# UNPACK #-} !Word8
     -- ^ Total number of input bytes, modulo 256.
     }
@@ -87,10 +85,10 @@ word. The result is the reference implementation's output word: a
 64-bit tag word in the low half and the second in the high half; its
 little-endian serialization is the 16-byte reference digest.
 
-For example, with key @0x000102030405060708090a0b0c0d0e0f@ and the
-empty input, SipHash-2-4 returns @0x726fdb47dd0e0e31@ as a 'Word64',
-whose little-endian bytes @31 0e 0e dd 47 db 6f 72@ are the first
-entry of the reference @vectors_sip64@.
+Example:
+@
+sipHash \@'Word64' 2 4 0xc0ffee \"hello\"
+@
 -}
 sipHash :: forall result mono. (SipHashData mono, SipHashResult result) => Word -> Word -> Word128 -> mono -> result
 sipHash c d key mono =
@@ -123,7 +121,6 @@ sipHash c d key mono =
             }
 {-# INLINEABLE sipHash #-}
 
--- | Buffer input bytes, compressing each full 64-bit word.
 step :: Word -> SipStream -> Word8 -> SipStream
 step c SipStream{ssData = d, ssWord = word, ssCount = n, ssLen = len} !b =
     let word' = word .|. (fromIntegral b `shiftL` (8 * n))
@@ -141,7 +138,6 @@ compress c (SipData !v0 !v1 !v2 !v3) m =
      in SipData v0'' v1' v2' v3''
 {-# INLINE compress #-}
 
--- | One full round, made of two half-rounds.
 sipRound :: SipData -> SipData
 sipRound (SipData !v0 !v1 !v2 !v3) =
     let v0' = v0 + v1
@@ -161,7 +157,6 @@ sipRound (SipData !v0 !v1 !v2 !v3) =
      in SipData v0''' v1'''' v2''' v3''''
 {-# INLINE sipRound #-}
 
--- | Apply 'sipRound' @n@ times.
 sipRoundN :: Word -> SipData -> SipData
 sipRoundN 0 !x = x
 sipRoundN n !x = sipRoundN (n - 1) $! sipRound x

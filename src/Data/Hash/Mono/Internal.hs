@@ -8,11 +8,7 @@ where
 import Data.Bits (Bits (shiftL, shiftR, (.&.)))
 import Data.Word (Word32, Word64)
 
-{- | Byte-swap a 'Word64'.
-
-The public API takes keys as big-endian byte strings; the reference
-implementation reads each 64-bit key half as a little-endian word.
--}
+-- | Byte-swap a 'Word64'.
 byteSwap64 :: Word64 -> Word64
 byteSwap64 w =
     let c0 = (w `shiftR` 56) .&. 0xff
@@ -33,11 +29,7 @@ byteSwap64 w =
             + (c7 `shiftL` 56)
 {-# INLINEABLE byteSwap64 #-}
 
-{- | Byte-swap a 'Word32'.
-
-The public API takes keys as big-endian byte strings; the reference
-implementation reads each 32-bit key half as a little-endian word.
--}
+-- | Byte-swap a 'Word32'.
 byteSwap32 :: Word32 -> Word32
 byteSwap32 w =
     let c0 = (w `shiftR` 24) .&. 0xff
