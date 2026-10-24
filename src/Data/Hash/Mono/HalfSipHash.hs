@@ -18,7 +18,7 @@ where
 import Data.Bits (Bits (rotateL, shiftL, shiftR, xor, (.&.), (.|.)))
 import Data.Hash.Mono.Internal (
     ToWords (..),
-    word32ToLE,
+    byteSwap32,
  )
 import Data.MonoTraversable (Element, MonoFoldable (ofoldl'))
 import Data.Word (Word32, Word64, Word8)
@@ -42,7 +42,7 @@ instance HalfSipHashResult Word32 where
     finalization d (HalfSipData !v0 !v1 !v2 !v3) =
         let v2' = v2 `xor` 0xff
             (HalfSipData !_ v1' _ !v3') = halfSipRounds d (HalfSipData v0 v1 v2' v3)
-         in word32ToLE $ v1' `xor` v3'
+         in v1' `xor` v3'
 
 instance HalfSipHashResult Word64 where
     initialize :: HalfSipData -> HalfSipData
@@ -52,11 +52,11 @@ instance HalfSipHashResult Word64 where
     finalization d (HalfSipData !v0 !v1 !v2 !v3) =
         let v2' = v2 `xor` 0xee
             (HalfSipData !v0' !v1' !v2'' !v3') = halfSipRounds d (HalfSipData v0 v1 v2' v3)
-            hi = word32ToLE $ v1' `xor` v3'
+            word0 = v1' `xor` v3'
             v1'' = v1' `xor` 0xdd
             (HalfSipData _ !v1''' _ !v3'') = halfSipRounds d (HalfSipData v0' v1'' v2'' v3')
-            lo = word32ToLE $ v1''' `xor` v3''
-         in (fromIntegral hi `shiftL` 32) + fromIntegral lo
+            word1 = v1''' `xor` v3''
+         in (fromIntegral word1 `shiftL` 32) + fromIntegral word0
 
 {- | Constraint for containers that can be hashed with HalfSipHash.
 
@@ -91,14 +91,19 @@ data HalfSipStream = HalfSipStream
 {- | Compute HalfSipHash-@c@-@d@ of a monomorphic container.
 
 @c@ and @d@ are the compression and finalization round counts;
-HalfSipHash-2-4 is the standard variant. The 64-bit key is split into two
-32-bit halves.
+HalfSipHash-2-4 is the standard variant.
 
-For example:
+Byte order: the 'Word64' key holds the 8 reference key bytes in
+big-endian order, and each 32-bit half is then read as a little-endian
+word. The result is the reference implementation's output word: a
+'Word32' result is the 32-bit tag. A 'Word64' result packs the first
+32-bit tag word in the low half and the second in the high half; its
+little-endian serialization is the 8-byte reference digest.
 
-@
-halfSipHash \@'Word32' 2 4 key input
-@
+For example, with key @0x0001020304050607@ and the empty input,
+HalfSipHash-2-4 returns @0x5b9f35a9@ as a 'Word32', whose little-endian
+bytes @a9 35 9f 5b@ are the first entry of the reference
+@vectors_hsip32@.
 -}
 halfSipHash :: forall result mono. (HalfSipHashData mono, HalfSipHashResult result) => Word -> Word -> Word64 -> mono -> result
 halfSipHash c d key mono =
@@ -116,10 +121,10 @@ halfSipHash c d key mono =
             }
       where
         k0 :: Word32
-        k0 = word32ToLE . fromIntegral $ key `shiftR` 32
+        k0 = byteSwap32 . fromIntegral $ key `shiftR` 32
 
         k1 :: Word32
-        k1 = word32ToLE . fromIntegral $ key .&. 0xffffffff
+        k1 = byteSwap32 . fromIntegral $ key .&. 0xffffffff
 
     initStream :: HalfSipStream
     initStream =
@@ -182,7 +187,7 @@ halfSipRoundN n !x = halfSipRoundN (n - 1) $! halfSipRound x
 {- | Apply 'halfSipRound' @n@ times, with unrolled cases for the small counts
 used in practice (HalfSipHash-2-4 uses 2 and 4).
 
-Unlike 'halfSipRoundN' this function is not recursive, so the 'INLINE'
+Unlike 'halfSipRoundN' this function is not recursive, so the @INLINE@
 pragma is honoured: calls with a small @n@ become straight-line code instead
 of a call to a loop. (When @n@ is a known literal the case can fold away as
 well.)

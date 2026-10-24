@@ -2,7 +2,7 @@
 
 module Main (main) where
 
-import Data.Bits (Bits, shiftL, shiftR)
+import Data.Bits (Bits, shiftL, shiftR, (.&.))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
 import qualified Data.ByteString.Lazy as BSL
@@ -13,6 +13,7 @@ import Data.Hash.Mono.SipHash
 import Data.Int (Int16, Int32, Int64, Int8)
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Data.WideWord.Word128 (Word128)
 import Data.WideWord.Word256 (Word256)
 import Data.Word (Word16, Word32, Word64, Word8)
@@ -20,28 +21,31 @@ import qualified Test.Data.FNV
 import qualified Test.Data.HalfSipHash
 import qualified Test.Data.SipHash
 import Test.Tasty (TestTree, defaultMain, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=))
+import Test.Tasty.HUnit (assertBool, testCase, (@?=))
 
 main :: IO ()
 main = defaultMain tests
 
-{- | Code points needing one, two, and three bytes in the hash encoding.
-The 'Char' instance emits each code point most significant byte first.
+{- | Code points spanning the one- to four-byte UTF-8 ranges, including the
+boundaries between them.
 -}
 charEncodingInput :: String
-charEncodingInput = "\x00\x7f\x80\xff\x100\x1234\x1F600"
+charEncodingInput = "\x00\x7f\x80\x7ff\x800\xffff\x10000\x1234\x1F600\x10FFFF"
 
+-- | UTF-8 bytes of a 'Char'; lone surrogates use the 3-byte WTF-8 form.
 charBytes :: Char -> [Word8]
 charBytes c
-    | n < 0x100 = [fromIntegral n]
-    | n < 0x10000 = [fromIntegral (n `shiftR` 8), fromIntegral n]
-    | otherwise =
-        [ fromIntegral (n `shiftR` 16)
-        , fromIntegral (n `shiftR` 8)
-        , fromIntegral n
-        ]
+    | n < 0x80 = [fromIntegral n]
+    | n < 0x800 = [byte 0xc0 6, byte 0x80 0]
+    | n < 0x10000 = [byte 0xe0 12, byte 0x80 6, byte 0x80 0]
+    | otherwise = [byte 0xf0 18, byte 0x80 12, byte 0x80 6, byte 0x80 0]
   where
     n = fromEnum c
+    byte mask shift = fromIntegral (mask + ((n `shiftR` shift) .&. 0x3f))
+
+-- | UTF-8 bytes of a 'String'.
+utf8 :: String -> BS.ByteString
+utf8 = TE.encodeUtf8 . T.pack
 
 -- | Big-endian bytes of a fixed-width word.
 wordBytes :: (Bits a, Integral a) => Int -> a -> [Word8]
@@ -171,23 +175,30 @@ tests =
         "Tests"
         [ goldenSamples
         , inputEncoding
+        , encodingCollisions
         ]
 
--- | Hashes must match published reference vectors.
+{- | Hashes must match the reference vectors in 'Test.Data.SipHash',
+'Test.Data.HalfSipHash', and 'Test.Data.FNV'.
+-}
 goldenSamples :: TestTree
 goldenSamples =
     testGroup
         "Golden Samples"
         [ testGroup
             "FNV"
-            [ testCase "FNV1  Word32 String" $ fmap (fnv1 @Word32) (Test.Data.FNV.inputs @String) @?= Test.Data.FNV.fnv1VectorsForWord32
-            , testCase "FNV1a Word32 String" $ fmap (fnv1a @Word32) (Test.Data.FNV.inputs @String) @?= Test.Data.FNV.fnv1aVectorsForWord32
-            , testCase "FNV1  Word64 String" $ fmap (fnv1 @Word64) (Test.Data.FNV.inputs @String) @?= Test.Data.FNV.fnv1VectorsForWord64
-            , testCase "FNV1a Word64 String" $ fmap (fnv1a @Word64) (Test.Data.FNV.inputs @String) @?= Test.Data.FNV.fnv1aVectorsForWord64
-            , testCase "FNV1  Word32 Text" $ fmap (fnv1 @Word32) (Test.Data.FNV.inputs @Text) @?= Test.Data.FNV.fnv1VectorsForWord32
-            , testCase "FNV1a Word32 Text" $ fmap (fnv1a @Word32) (Test.Data.FNV.inputs @Text) @?= Test.Data.FNV.fnv1aVectorsForWord32
-            , testCase "FNV1  Word64 Text" $ fmap (fnv1 @Word64) (Test.Data.FNV.inputs @Text) @?= Test.Data.FNV.fnv1VectorsForWord64
-            , testCase "FNV1a Word64 Text" $ fmap (fnv1a @Word64) (Test.Data.FNV.inputs @Text) @?= Test.Data.FNV.fnv1aVectorsForWord64
+            [ testCase "FNV1  Word32 String matches UTF-8 bytes" $ fmap (fnv1 @Word32) (Test.Data.FNV.inputs @String) @?= fmap (fnv1 @Word32 . utf8) (Test.Data.FNV.inputs @String)
+            , testCase "FNV1a Word32 String matches UTF-8 bytes" $ fmap (fnv1a @Word32) (Test.Data.FNV.inputs @String) @?= fmap (fnv1a @Word32 . utf8) (Test.Data.FNV.inputs @String)
+            , testCase "FNV1  Word64 String matches UTF-8 bytes" $ fmap (fnv1 @Word64) (Test.Data.FNV.inputs @String) @?= fmap (fnv1 @Word64 . utf8) (Test.Data.FNV.inputs @String)
+            , testCase "FNV1a Word64 String matches UTF-8 bytes" $ fmap (fnv1a @Word64) (Test.Data.FNV.inputs @String) @?= fmap (fnv1a @Word64 . utf8) (Test.Data.FNV.inputs @String)
+            , testCase "FNV1  Word32 Text matches UTF-8 bytes" $ fmap (fnv1 @Word32) (Test.Data.FNV.inputs @Text) @?= fmap (fnv1 @Word32 . TE.encodeUtf8) (Test.Data.FNV.inputs @Text)
+            , testCase "FNV1a Word32 Text matches UTF-8 bytes" $ fmap (fnv1a @Word32) (Test.Data.FNV.inputs @Text) @?= fmap (fnv1a @Word32 . TE.encodeUtf8) (Test.Data.FNV.inputs @Text)
+            , testCase "FNV1  Word64 Text matches UTF-8 bytes" $ fmap (fnv1 @Word64) (Test.Data.FNV.inputs @Text) @?= fmap (fnv1 @Word64 . TE.encodeUtf8) (Test.Data.FNV.inputs @Text)
+            , testCase "FNV1a Word64 Text matches UTF-8 bytes" $ fmap (fnv1a @Word64) (Test.Data.FNV.inputs @Text) @?= fmap (fnv1a @Word64 . TE.encodeUtf8) (Test.Data.FNV.inputs @Text)
+            , testCase "FNV1a Word32 non-ASCII String" $ fmap (fnv1a @Word32) Test.Data.FNV.utf8Inputs @?= Test.Data.FNV.fnv1aVectorsForWord32Utf8
+            , testCase "FNV1a Word32 non-ASCII Text" $ fmap ((fnv1a @Word32) . T.pack) Test.Data.FNV.utf8Inputs @?= Test.Data.FNV.fnv1aVectorsForWord32Utf8
+            , testCase "FNV1a Word64 non-ASCII String" $ fmap (fnv1a @Word64) Test.Data.FNV.utf8Inputs @?= Test.Data.FNV.fnv1aVectorsForWord64Utf8
+            , testCase "FNV1a Word64 non-ASCII Text" $ fmap ((fnv1a @Word64) . T.pack) Test.Data.FNV.utf8Inputs @?= Test.Data.FNV.fnv1aVectorsForWord64Utf8
             , testCase "FNV1  Word32 ByteString" $ fmap (fnv1 @Word32) (Test.Data.FNV.inputs @BS.ByteString) @?= Test.Data.FNV.fnv1VectorsForWord32
             , testCase "FNV1a Word32 ByteString" $ fmap (fnv1a @Word32) (Test.Data.FNV.inputs @BS.ByteString) @?= Test.Data.FNV.fnv1aVectorsForWord32
             , testCase "FNV1  Word64 ByteString" $ fmap (fnv1 @Word64) (Test.Data.FNV.inputs @BS.ByteString) @?= Test.Data.FNV.fnv1VectorsForWord64
@@ -250,8 +261,10 @@ inputEncoding =
             "FNV"
             [ testCase "FNV1a Word64 Char encoding matches bytes" $ do
                 let bytes = BS.pack (concatMap charBytes charEncodingInput)
+                bytes @?= TE.encodeUtf8 (T.pack charEncodingInput)
                 fnv1a @Word64 charEncodingInput @?= fnv1a @Word64 bytes
                 fnv1a @Word64 (T.pack charEncodingInput) @?= fnv1a @Word64 bytes
+                fnv1a @Word64 "\xD800" @?= fnv1a @Word64 (BS.pack [0xed, 0xa0, 0x80])
             , testCase "FNV1a Word64 word elements match bytes" $ do
                 fnv1a @Word64 [word128Sample] @?= fnv1a @Word64 (BS.pack (wordBytes 16 word128Sample))
                 fnv1a @Word64 [word256Sample] @?= fnv1a @Word64 (BS.pack (wordBytes 32 word256Sample))
@@ -273,6 +286,7 @@ inputEncoding =
             "SipHash"
             [ testCase "SipHash-2-4 Word64 Char encoding matches bytes" $ do
                 let bytes = BS.pack (concatMap charBytes charEncodingInput)
+                bytes @?= TE.encodeUtf8 (T.pack charEncodingInput)
                 sipHash @Word64 2 4 Test.Data.SipHash.key charEncodingInput @?= sipHash @Word64 2 4 Test.Data.SipHash.key bytes
                 sipHash @Word64 2 4 Test.Data.SipHash.key (T.pack charEncodingInput) @?= sipHash @Word64 2 4 Test.Data.SipHash.key bytes
             , testCase "SipHash-2-4 Word64 word elements match bytes" $ do
@@ -292,6 +306,7 @@ inputEncoding =
             "HalfSipHash"
             [ testCase "HalfSipHash-2-4 Word32 Char encoding matches bytes" $ do
                 let bytes = BS.pack (concatMap charBytes charEncodingInput)
+                bytes @?= TE.encodeUtf8 (T.pack charEncodingInput)
                 halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key charEncodingInput @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key bytes
                 halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key (T.pack charEncodingInput) @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key bytes
             , testCase "HalfSipHash-2-4 Word32 word elements match bytes" $ do
@@ -308,3 +323,40 @@ inputEncoding =
                 halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key int64Samples @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key int64SampleBytes
             ]
         ]
+
+{- | Distinct texts that the old, non-prefix-free 'Char' encoding mapped to
+the same bytes must hash differently.
+-}
+encodingCollisions :: TestTree
+encodingCollisions =
+    testGroup
+        "Encoding Collisions"
+        [ testGroup
+            "FNV"
+            [ testCase "FNV1a Word64 String" $ checkCollisions (fnv1a @Word64) id
+            , testCase "FNV1a Word64 Text" $ checkCollisions (fnv1a @Word64) T.pack
+            ]
+        , testGroup
+            "SipHash"
+            [ testCase "SipHash-2-4 Word64 String" $ checkCollisions (sipHash @Word64 2 4 Test.Data.SipHash.key) id
+            , testCase "SipHash-2-4 Word64 Text" $ checkCollisions (sipHash @Word64 2 4 Test.Data.SipHash.key) T.pack
+            ]
+        , testGroup
+            "HalfSipHash"
+            [ testCase "HalfSipHash-2-4 Word32 String" $ checkCollisions (halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key) id
+            , testCase "HalfSipHash-2-4 Word32 Text" $ checkCollisions (halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key) T.pack
+            ]
+        ]
+
+checkCollisions :: (Eq a, Show a) => (t -> a) -> (String -> t) -> IO ()
+checkCollisions h mk =
+    mapM_
+        (\(label, x, y) -> assertBool label (h (mk x) /= h (mk y)))
+        collisionPairs
+
+collisionPairs :: [(String, String, String)]
+collisionPairs =
+    [ ("U+0100 and U+0001 U+0000 must not collide", "\x0100", "\x01\x00")
+    , ("U+1234 and U+0012 U+0034 must not collide", "\x1234", "\x12\x34")
+    , ("U+1F600 and U+0001 U+00F6 U+0000 must not collide", "\x1F600", "\x01\xF6\x00")
+    ]

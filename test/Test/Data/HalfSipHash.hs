@@ -1,3 +1,10 @@
+{- | Reference HalfSipHash-2-4 vectors.
+
+The values are the reference implementation's output words, i.e. the
+little-endian reading of the byte arrays in
+<https://github.com/veorq/SipHash/blob/master/vectors.h>. The key bytes
+are @00 01 .. 07@.
+-}
 module Test.Data.HalfSipHash where
 
 import qualified Data.ByteString as BS
@@ -11,157 +18,165 @@ key = 0x0001020304050607
 inputs :: (IsString a, Monoid a) => [a]
 inputs = fmap (\n -> fromString $ fmap chr [0 .. n - 1]) [0 .. 64 - 1]
 
--- | Inputs that exercise the HalfSipHash length-byte wrap at 256 bytes.
+-- | Inputs around the 256-byte length-byte wrap (254-513 bytes).
 boundaryInputs :: [BS.ByteString]
 boundaryInputs = [BS.replicate n 97 | n <- [254, 255, 256, 257, 258, 511, 512, 513]]
 
+{- | HalfSipHash-2-4-32 reference output words for the empty input and
+the prefixes of @00 01 ..@.
+-}
 halfSipHash24VectorsForWord32 :: [Word32]
 halfSipHash24VectorsForWord32 =
-    [ 0xa9359f5b
-    , 0x27475ab8
-    , 0xfa62a603
-    , 0x8afee704
-    , 0x2a6e4689
-    , 0xc5fab669
-    , 0x5863fc23
-    , 0x8bcf63c5
-    , 0xd0b8848f
-    , 0xf806e779
-    , 0x94b07934
-    , 0x08083050
-    , 0x57f0872f
-    , 0x77e663ff
-    , 0xd6fff87c
-    , 0x74fe2b97
-    , 0xd9b5ac84
-    , 0xc474645b
-    , 0x465b8d9b
-    , 0x7befe387
-    , 0xe34d1045
-    , 0x613f62b3
-    , 0x70f367fe
-    , 0xe6adb8bd
-    , 0x27400c63
-    , 0x26787875
-    , 0x4f567b5f
-    , 0x3ab0e669
-    , 0xb0644000
-    , 0xff670fb4
-    , 0x509e338b
-    , 0x5d589f1a
-    , 0xfee72112
-    , 0x33753259
-    , 0x6a434f8c
-    , 0xfe28b729
-    , 0xe75cc6ec
-    , 0x697e8d54
-    , 0x63688b0f
-    , 0x650b62b4
-    , 0xb6bc1840
-    , 0x5d074505
-    , 0x2442fd2e
-    , 0x7bb7863a
-    , 0x7705d548
-    , 0xd75208b1
-    , 0xb6d499c8
-    , 0x0892202e
-    , 0x69e12ce3
-    , 0x8db580e5
-    , 0x369764c6
-    , 0x016e0204
-    , 0x3b85f3d4
-    , 0xfedb66be
-    , 0x1e692a3a
-    , 0xc68984c0
-    , 0xa5c5b940
-    , 0x9be9e88c
-    , 0x7dbc8140
-    , 0x7c078ec5
-    , 0xd4e76c73
-    , 0x428fcbb9
-    , 0xbd83997a
-    , 0x59ea4a74
+    [ 0x5b9f35a9
+    , 0xb85a4727
+    , 0x03a662fa
+    , 0x04e7fe8a
+    , 0x89466e2a
+    , 0x69b6fac5
+    , 0x23fc6358
+    , 0xc563cf8b
+    , 0x8f84b8d0
+    , 0x79e706f8
+    , 0x3479b094
+    , 0x50300808
+    , 0x2f87f057
+    , 0xff63e677
+    , 0x7cf8ffd6
+    , 0x972bfe74
+    , 0x84acb5d9
+    , 0x5b6474c4
+    , 0x9b8d5b46
+    , 0x87e3ef7b
+    , 0x45104de3
+    , 0xb3623f61
+    , 0xfe67f370
+    , 0xbdb8ade6
+    , 0x630c4027
+    , 0x75787826
+    , 0x5f7b564f
+    , 0x69e6b03a
+    , 0x004064b0
+    , 0xb40f67ff
+    , 0x8b339e50
+    , 0x1a9f585d
+    , 0x1221e7fe
+    , 0x59327533
+    , 0x8c4f436a
+    , 0x29b728fe
+    , 0xecc65ce7
+    , 0x548d7e69
+    , 0x0f8b6863
+    , 0xb4620b65
+    , 0x4018bcb6
+    , 0x0545075d
+    , 0x2efd4224
+    , 0x3a86b77b
+    , 0x48d50577
+    , 0xb10852d7
+    , 0xc899d4b6
+    , 0x2e209208
+    , 0xe32ce169
+    , 0xe580b58d
+    , 0xc6649736
+    , 0x04026e01
+    , 0xd4f3853b
+    , 0xbe66dbfe
+    , 0x3a2a691e
+    , 0xc08489c6
+    , 0x40b9c5a5
+    , 0x8ce8e99b
+    , 0x4081bc7d
+    , 0xc58e077c
+    , 0x736ce7d4
+    , 0xb9cb8f42
+    , 0x7a9983bd
+    , 0x744aea59
     ]
 
+{- | HalfSipHash-2-4-64 reference output words. Each result is the
+little-endian reading of an 8-byte @vectors_hsip64@ entry: the first
+32-bit output word is the low half and the second is the high half.
+-}
 halfSipHash24VectorsForWord64 :: [Word64]
 halfSipHash24VectorsForWord64 =
-    [ 0x218d1f59b9b83cc8
-    , 0xbe552412f8387315
-    , 0x064f39ef7c50eb57
-    , 0xce0f1a45f7060679
-    , 0xd5e78a175be52ea1
-    , 0xcb9d7c3f2f3db580
-    , 0xce3e91358aa2bc25
-    , 0xff202728b07bc684
-    , 0xedfee820bce4858c
-    , 0x5b51cccc13888307
-    , 0x95b0469f06a6f2ee
-    , 0xae26333994ddcd48
-    , 0x7bc71f9faef5c799
-    , 0x5a2352d75a0c3744
-    , 0x3bb1a870eae8e658
-    , 0x217d0bcb4e81c902
-    , 0x7336aad25f7bf3b5
-    , 0x37adc0641c4c4f6a
-    , 0xc9b2db2b9a3e42f9
-    , 0xf910e48020ab363c
-    , 0x1bf52b0a6feea7db
-    , 0x00741dc269e8b3ef
-    , 0xe20103fa1ba776ef
-    , 0x4c2210e54b681d73
-    , 0x70741045ae3fa6f1
-    , 0x0c86403739714038
-    , 0x0d899ed8112923f0
-    , 0x226bf5fab81ee1b8
-    , 0x2d925ffb1e0016b5
-    , 0x361958d52cee10f1
-    , 0x291aaf864898179d
-    , 0x863c7f155c34117c
-    , 0x28709d46d811626c
-    , 0x248477681d28f89c
-    , 0x8324e4d7528f9830
-    , 0xf9efd4e13aea6bd8
-    , 0x86d67a40ec4276dc
-    , 0x3f6292eccca97e35
-    , 0xcbd92ee724d42109
-    , 0x368df6808d403d79
-    , 0x5b38c81c67c8ae4c
-    , 0x95ab7189d439acb3
-    , 0xa91a52c025327024
-    , 0x5b0087c69528acea
-    , 0x1e30f3ad27dcb15a
-    , 0x697f5c9a90324ed4
-    , 0x495c0f995557dc38
-    , 0x9427202a3c29f94d
-    , 0xa9eaa8c04ba93e3e
-    , 0xeea4c1737d011218
-    , 0x912d568fd8f65a49
-    , 0x56919596b0ff5c97
-    , 0x02445a7998f550e1
-    , 0x86ec466ce71d1fb2
-    , 0x359569e7d289e3bc
-    , 0x871b05ca62bb7c96
-    , 0xa1a492f942f15f1d
-    , 0x12ec267ff6095b6e
-    , 0x5d1b5ea1b231d89d
-    , 0xd8cfb4453f92ee54
-    , 0xd6762890bf26e460
-    , 0x313563a4b7ed5cf3
-    , 0xf90b3ab572d46693
-    , 0x2ea63c71bf326087
+    [ 0xc83cb8b9591f8d21
+    , 0x157338f8122455be
+    , 0x57eb507cef394f06
+    , 0x790606f7451a0fce
+    , 0xa12ee55b178ae7d5
+    , 0x80b53d2f3f7c9dcb
+    , 0x25bca28a35913ece
+    , 0x84c67bb0282720ff
+    , 0x8c85e4bc20e8feed
+    , 0x07838813cccc515b
+    , 0xeef2a6069f46b095
+    , 0x48cddd94393326ae
+    , 0x99c7f5ae9f1fc77b
+    , 0x44370c5ad752235a
+    , 0x58e6e8ea70a8b13b
+    , 0x02c9814ecb0b7d21
+    , 0xb5f37b5fd2aa3673
+    , 0x6a4f4c1c64c0ad37
+    , 0xf9423e9a2bdbb2c9
+    , 0x3c36ab2080e410f9
+    , 0xdba7ee6f0a2bf51b
+    , 0xefb3e869c21d7400
+    , 0xef76a71bfa0301e2
+    , 0x731d684be510224c
+    , 0xf1a63fae45107470
+    , 0x384071393740860c
+    , 0xf0232911d89e890d
+    , 0xb8e11eb8faf56b22
+    , 0xb516001efb5f922d
+    , 0xf110ee2cd5581936
+    , 0x9d17984886af1a29
+    , 0x7c11345c157f3c86
+    , 0x6c6211d8469d7028
+    , 0x9cf8281d68778424
+    , 0x30988f52d7e42483
+    , 0xd86bea3ae1d4eff9
+    , 0xdc7642ec407ad686
+    , 0x357ea9ccec92623f
+    , 0x0921d424e72ed9cb
+    , 0x793d408d80f68d36
+    , 0x4caec8671cc8385b
+    , 0xb3ac39d48971ab95
+    , 0x24703225c0521aa9
+    , 0xeaac2895c687005b
+    , 0x5ab1dc27adf3301e
+    , 0xd44e32909a5c7f69
+    , 0x38dc5755990f5c49
+    , 0x4df9293c2a202794
+    , 0x3e3ea94bc0a8eaa9
+    , 0x1812017d73c1a4ee
+    , 0x495af6d88f562d91
+    , 0x975cffb096959156
+    , 0xe150f598795a4402
+    , 0xb21f1de76c46ec86
+    , 0xbce389d2e7699535
+    , 0x967cbb62ca051b87
+    , 0x1d5ff142f992a4a1
+    , 0x6e5b09f67f26ec12
+    , 0x9dd831b2a15e1b5d
+    , 0x54ee923f45b4cfd8
+    , 0x60e426bf902876d6
+    , 0xf35cedb7a4633531
+    , 0x9366d472b53a0bf9
+    , 0x876032bf713ca62e
     ]
 
-{- | Expected results for 'boundaryInputs', recorded before the streaming
-rewrite.
+{- | Reference HalfSipHash-2-4-32 output words for 'boundaryInputs'.
+The values use the same byte order as
+'halfSipHash24VectorsForWord32'.
 -}
 boundaryVectorsForWord32 :: [Word32]
 boundaryVectorsForWord32 =
-    [ 0x4db2af8b
-    , 0x4fbcde80
-    , 0x6317c2cc
-    , 0x3ce6aa74
-    , 0x7a3810c1
-    , 0x9689238d
-    , 0x6f9825ea
-    , 0xaa1f7179
+    [ 0x8bafb24d
+    , 0x80debc4f
+    , 0xccc21763
+    , 0x74aae63c
+    , 0xc110387a
+    , 0x8d238996
+    , 0xea25986f
+    , 0x79711faa
     ]

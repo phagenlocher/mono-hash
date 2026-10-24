@@ -5,3 +5,5 @@
 * First release.
 * FNV-1 and FNV-1a for monomorphic containers.
 * SipHash-c-d and HalfSipHash-c-d for monomorphic containers.
+* SipHash and HalfSipHash use the reference implementation's output-word
+  byte order; keys are the reference key bytes in big-endian order.

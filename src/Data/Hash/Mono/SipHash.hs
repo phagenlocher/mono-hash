@@ -18,7 +18,7 @@ where
 import Data.Bits (Bits (rotateL, shiftL, xor, (.|.)))
 import Data.Hash.Mono.Internal (
     ToWords (..),
-    word64ToLE,
+    byteSwap64,
  )
 import Data.MonoTraversable (Element, MonoFoldable (ofoldl'))
 import Data.WideWord.Word128 (Word128 (..))
@@ -43,7 +43,7 @@ instance SipHashResult Word64 where
     finalization d (SipData !v0 !v1 !v2 !v3) =
         let v2' = v2 `xor` 0xff
             (SipData !v0' !v1' !v2'' !v3') = sipRounds d (SipData v0 v1 v2' v3)
-         in word64ToLE $ v0' `xor` v1' `xor` v2'' `xor` v3'
+         in v0' `xor` v1' `xor` v2'' `xor` v3'
 
 instance SipHashResult Word128 where
     initialize :: SipData -> SipData
@@ -53,11 +53,11 @@ instance SipHashResult Word128 where
     finalization d (SipData !v0 !v1 !v2 !v3) =
         let v2' = v2 `xor` 0xee
             (SipData !v0' !v1' !v2'' !v3') = sipRounds d (SipData v0 v1 v2' v3)
-            hi = word64ToLE $ v0' `xor` v1' `xor` v2'' `xor` v3'
+            word0 = v0' `xor` v1' `xor` v2'' `xor` v3'
             v1'' = v1' `xor` 0xdd
             (SipData !v0'' !v1''' !v2''' !v3'') = sipRounds d (SipData v0' v1'' v2'' v3')
-            lo = word64ToLE $ v0'' `xor` v1''' `xor` v2''' `xor` v3''
-         in Word128 hi lo
+            word1 = v0'' `xor` v1''' `xor` v2''' `xor` v3''
+         in Word128 word1 word0
 
 {- | Constraint for containers that can be hashed with SipHash.
 
@@ -92,14 +92,19 @@ data SipStream = SipStream
 {- | Compute SipHash-@c@-@d@ of a monomorphic container.
 
 @c@ and @d@ are the compression and finalization round counts;
-SipHash-2-4 is the standard variant. The 128-bit key is split into two
-64-bit halves.
+SipHash-2-4 is the standard variant.
 
-For example:
+Byte order: the @Word128@ key holds the 16 reference key bytes in
+big-endian order, and each 64-bit half is then read as a little-endian
+word. The result is the reference implementation's output word: a
+'Word64' result is the 64-bit tag. A @Word128@ result packs the first
+64-bit tag word in the low half and the second in the high half; its
+little-endian serialization is the 16-byte reference digest.
 
-@
-sipHash \@'Word64' 2 4 key input
-@
+For example, with key @0x000102030405060708090a0b0c0d0e0f@ and the
+empty input, SipHash-2-4 returns @0x726fdb47dd0e0e31@ as a 'Word64',
+whose little-endian bytes @31 0e 0e dd 47 db 6f 72@ are the first
+entry of the reference @vectors_sip64@.
 -}
 sipHash :: forall result mono. (SipHashData mono, SipHashResult result) => Word -> Word -> Word128 -> mono -> result
 sipHash c d key mono =
@@ -117,10 +122,10 @@ sipHash c d key mono =
             }
       where
         k0 :: Word64
-        k0 = word64ToLE $ word128Hi64 key
+        k0 = byteSwap64 $ word128Hi64 key
 
         k1 :: Word64
-        k1 = word64ToLE $ word128Lo64 key
+        k1 = byteSwap64 $ word128Lo64 key
 
     initStream :: SipStream
     initStream =
@@ -183,7 +188,7 @@ sipRoundN n !x = sipRoundN (n - 1) $! sipRound x
 {- | Apply 'sipRound' @n@ times, with unrolled cases for the small counts used
 in practice (SipHash-2-4 uses 2 and 4).
 
-Unlike 'sipRoundN' this function is not recursive, so the 'INLINE' pragma is
+Unlike 'sipRoundN' this function is not recursive, so the @INLINE@ pragma is
 honoured: calls with a small @n@ become straight-line code instead of a call
 to a loop. (When @n@ is a known literal the case can fold away as well.)
 -}

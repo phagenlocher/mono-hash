@@ -212,6 +212,43 @@ inputs =
     , mconcat $ replicate 500 "\x7f"
     ]
 
+{- | Non-ASCII inputs for the UTF-8 golden vectors: @é@, @café@, @naïve@,
+@U+0100@, @U+1F600@, and @U+10FFFF@.
+-}
+utf8Inputs :: [String]
+utf8Inputs =
+    [ "\xe9"
+    , "caf\xe9"
+    , "na\xefve"
+    , "\x0100"
+    , "\x1F600"
+    , "\x10FFFF"
+    ]
+
+{- | FNV-1a over the UTF-8 bytes of 'utf8Inputs'. With a 32-bit result the
+values wrap modulo @2^32@.
+-}
+fnv1aVectorsForWord32Utf8 :: [Word32]
+fnv1aVectorsForWord32Utf8 =
+    [ 0x1e9de8c1
+    , 0xa82b5049
+    , 0x999a082b
+    , 0x779015e9
+    , 0x33a29608
+    , 0x41c1bc3a
+    ]
+
+-- | FNV-1a over the UTF-8 bytes of 'utf8Inputs'.
+fnv1aVectorsForWord64Utf8 :: [Word64]
+fnv1aVectorsForWord64Utf8 =
+    [ 0x0ac21707b7181e01
+    , 0x48e8823acfa40d89
+    , 0x1e858bc68a6332ab
+    , 0x0ab1f007b70b1b89
+    , 0xfeff073875020288
+    , 0x6eb1861c2c1fff5a
+    ]
+
 fnv1VectorsForWord32 :: [Word32]
 fnv1VectorsForWord32 =
     [ 0x811c9dc5
