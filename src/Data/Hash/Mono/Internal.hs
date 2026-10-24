@@ -20,11 +20,11 @@ import Data.Word (Word16, Word32, Word64, Word8)
 Fixed-width integers are encoded most significant byte first; signed
 integers as their two's-complement bit pattern. For example, 'Int8' has
 the same bytes as the corresponding 'Word8'. 'Char' is encoded as UTF-8,
-so 'String' and 'Text' hash the same bytes as their UTF-8 encoding. Lone
+so 'String' and @Text@ hash the same bytes as their UTF-8 encoding. Lone
 surrogate code points, which 'Char' can represent, use the 3-byte
 <https://simonsapin.github.io/wtf-8/ WTF-8> form; that keeps the encoding
-injective and total, but note that 'Data.Text.Text' replaces lone
-surrogates with @U+FFFD@, so a 'String' and a 'Text' containing one encode
+injective and total, but note that @Text@ replaces lone
+surrogates with @U+FFFD@, so a 'String' and a @Text@ containing one encode
 differently. 'Word8' contributes its byte unchanged, so byte strings are
 hashed as their raw bytes.
 -}

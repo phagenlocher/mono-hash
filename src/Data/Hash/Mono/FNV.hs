@@ -7,6 +7,7 @@ The result width is chosen by the type application; see 'fnv1' and 'fnv1a'.
 module Data.Hash.Mono.FNV (
     FNVData,
     FNVResult,
+    HasFNVBasis (..),
     fnv1,
     fnv1a,
 )
@@ -19,7 +20,7 @@ import Data.WideWord.Word128 (Word128)
 import Data.WideWord.Word256 (Word256)
 import Data.Word (Word32, Word64, Word8)
 
--- | Offset basis and prime for an FNV output width.
+-- | Offset basis and prime for an FNV result width.
 class HasFNVBasis a where
     -- | Offset basis used to seed the hash.
     fnvOffsetBasis :: a
@@ -55,16 +56,10 @@ instance HasFNVBasis Word256 where
     fnvPrime :: Word256
     fnvPrime = 374144419156711147060143317175368453031918731002211
 
-{- | Constraint for types that can be used as an FNV result.
-
-Instances: 'Word32', 'Word64', 'Word128', and 'Word256'.
--}
+-- | Constraint for types that can be used as an FNV result.
 type FNVResult a = (HasFNVBasis a, Bits a, Num a)
 
-{- | Constraint for containers that can be hashed with FNV.
-
-Requires @ToWords@ for the element type.
--}
+-- | Constraint synonym for containers hashed with FNV.
 type FNVData a = (MonoFoldable a, ToWords (Element a))
 
 {- | Shared implementation of 'fnv1' and 'fnv1a'; they differ only in the

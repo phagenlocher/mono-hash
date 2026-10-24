@@ -64,9 +64,7 @@ word32Samples = [0x01020304, 0x05060708, 0xdeadbeef]
 word64Samples :: [Word64]
 word64Samples = [0x0102030405060708, 0x1112131415161718, 0xdeadbeefcafed00d]
 
-{- | Boundary values for each signed element type: minBound, -1, 0, 1,
-maxBound.
--}
+-- | Boundary values for the signed element types.
 int8Samples :: [Int8]
 int8Samples = [minBound, -1, 0, 1, maxBound]
 

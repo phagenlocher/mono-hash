@@ -1,5 +1,10 @@
 # Revision history for mono-hash
 
+## Unreleased
+
+* Export `HasFNVBasis` so the supported FNV result widths appear in the
+  generated documentation.
+
 ## 0.1.0.0 -- 2026-10-21
 
 * First release.

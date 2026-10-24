@@ -5,8 +5,7 @@
 
 {- | SipHash-@c@-@d@ for any 'MonoFoldable' container.
 
-Input is consumed one byte at a time in constant space. The result width is
-chosen by the type application; see 'sipHash'.
+The result width is chosen by the type application; see 'sipHash'.
 -}
 module Data.Hash.Mono.SipHash (
     SipHashData,
@@ -24,12 +23,9 @@ import Data.MonoTraversable (Element, MonoFoldable (ofoldl'))
 import Data.WideWord.Word128 (Word128 (..))
 import Data.Word (Word64, Word8)
 
--- | Output widths that 'sipHash' can produce.
+-- | Result widths that 'sipHash' can produce.
 class SipHashResult a where
-    {- | Adjust the initial state for the selected output width. The 128-bit
-    output mixes a domain separator into the second state word; the 64-bit
-    output does not.
-    -}
+    -- | Adjust the initial state for the selected result width.
     initialize :: SipData -> SipData
 
     -- | Run the finalization rounds and return the hash.
@@ -59,10 +55,7 @@ instance SipHashResult Word128 where
             word1 = v0'' `xor` v1''' `xor` v2''' `xor` v3''
          in Word128 word1 word0
 
-{- | Constraint for containers that can be hashed with SipHash.
-
-Requires @ToWords@ for the element type.
--}
+-- | Constraint synonym for containers hashed with SipHash.
 type SipHashData a = (MonoFoldable a, ToWords (Element a))
 
 -- | SipHash internal state, consisting of four 64-bit words.
@@ -73,14 +66,9 @@ data SipData = SipData
     , sv3 :: {-# UNPACK #-} !Word64
     }
 
-{- | Streaming SipHash state.
-
-The input is consumed one byte at a time, so memory use is constant
-regardless of input size.
--}
+-- | Internal SipHash accumulator.
 data SipStream = SipStream
     { ssData :: {-# UNPACK #-} !SipData
-    -- ^ Current hash state.
     , ssWord :: {-# UNPACK #-} !Word64
     -- ^ Input bytes buffered so far, in little-endian order.
     , ssCount :: {-# UNPACK #-} !Int
@@ -137,7 +125,7 @@ sipHash c d key mono =
             }
 {-# INLINEABLE sipHash #-}
 
--- | Feed one input byte into the stream, compressing every full 64-bit word.
+-- | Buffer input bytes, compressing each full 64-bit word.
 step :: Word -> SipStream -> Word8 -> SipStream
 step c SipStream{ssData = d, ssWord = word, ssCount = n, ssLen = len} !b =
     let word' = word .|. (fromIntegral b `shiftL` (8 * n))
@@ -147,7 +135,6 @@ step c SipStream{ssData = d, ssWord = word, ssCount = n, ssLen = len} !b =
             else SipStream{ssData = d, ssWord = word', ssCount = n + 1, ssLen = len'}
 {-# INLINE step #-}
 
--- | Compress one 64-bit input word into the hash state.
 compress :: Word -> SipData -> Word64 -> SipData
 compress c (SipData !v0 !v1 !v2 !v3) m =
     let v3' = v3 `xor` m
@@ -156,7 +143,7 @@ compress c (SipData !v0 !v1 !v2 !v3) m =
      in SipData v0'' v1' v2' v3''
 {-# INLINE compress #-}
 
--- | One full SipHash round (two half-rounds).
+-- | One full round, made of two half-rounds.
 sipRound :: SipData -> SipData
 sipRound (SipData !v0 !v1 !v2 !v3) =
     let v0' = v0 + v1
@@ -176,22 +163,12 @@ sipRound (SipData !v0 !v1 !v2 !v3) =
      in SipData v0''' v1'''' v2''' v3''''
 {-# INLINE sipRound #-}
 
-{- | Apply 'sipRound' @n@ times.
-
-This is the general fallback. It is self-recursive, so GHC treats it as a
-loop breaker and never inlines or unrolls it, even when @n@ is a literal.
--}
+-- | Apply 'sipRound' @n@ times.
 sipRoundN :: Word -> SipData -> SipData
 sipRoundN 0 !x = x
 sipRoundN n !x = sipRoundN (n - 1) $! sipRound x
 
-{- | Apply 'sipRound' @n@ times, with unrolled cases for the small counts used
-in practice (SipHash-2-4 uses 2 and 4).
-
-Unlike 'sipRoundN' this function is not recursive, so the @INLINE@ pragma is
-honoured: calls with a small @n@ become straight-line code instead of a call
-to a loop. (When @n@ is a known literal the case can fold away as well.)
--}
+-- | Unrolled variant of 'sipRoundN' for the small counts used in practice.
 sipRounds :: Word -> SipData -> SipData
 sipRounds 1 !x = sipRound x
 sipRounds 2 !x = sipRound (sipRound x)

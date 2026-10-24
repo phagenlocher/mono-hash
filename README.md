@@ -50,7 +50,7 @@ halfSipHash @Word32 2 4 (0x0001020304050607 :: Word64) ("hello" :: Text)
 
 The result width is selected with a type application:
 
-| Function       | Result types                              |
+| Function       | Result width                              |
 | -------------- | ----------------------------------------- |
 | `fnv1`/`fnv1a` | `Word32`, `Word64`, `Word128`, `Word256`  |
 | `sipHash`      | `Word64`, `Word128`                       |
@@ -119,9 +119,10 @@ GHC 8.10.7 through 9.14.1.
 
 ## Formatting and linting
 
-Sources are formatted with [fourmolu](https://github.com/fourmolu/fourmolu) (0.21.0.0)
-and linted with [hlint](https://github.com/ndmitchell/hlint) (3.10). CI checks
-both, so run them before opening a pull request:
+Sources are formatted with [fourmolu](https://github.com/fourmolu/fourmolu) and
+linted with [hlint](https://github.com/ndmitchell/hlint). CI checks both, using
+the versions pinned in `.github/workflows/ci.yml`, so run them before opening
+a pull request:
 
 ```console
 fourmolu --mode inplace $(git ls-files '*.hs')

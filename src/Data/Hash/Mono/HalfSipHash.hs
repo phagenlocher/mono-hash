@@ -5,8 +5,7 @@
 
 {- | HalfSipHash-@c@-@d@ for any 'MonoFoldable' container.
 
-Input is consumed one byte at a time in constant space. The result width is
-chosen by the type application; see 'halfSipHash'.
+The result width is chosen by the type application; see 'halfSipHash'.
 -}
 module Data.Hash.Mono.HalfSipHash (
     HalfSipHashData,
@@ -23,12 +22,9 @@ import Data.Hash.Mono.Internal (
 import Data.MonoTraversable (Element, MonoFoldable (ofoldl'))
 import Data.Word (Word32, Word64, Word8)
 
--- | Output widths that 'halfSipHash' can produce.
+-- | Result widths that 'halfSipHash' can produce.
 class HalfSipHashResult a where
-    {- | Adjust the initial state for the selected output width. The 64-bit
-    output mixes a domain separator into the second state word; the 32-bit
-    output does not.
-    -}
+    -- | Adjust the initial state for the selected result width.
     initialize :: HalfSipData -> HalfSipData
 
     -- | Run the finalization rounds and return the hash.
@@ -58,10 +54,7 @@ instance HalfSipHashResult Word64 where
             word1 = v1''' `xor` v3''
          in (fromIntegral word1 `shiftL` 32) + fromIntegral word0
 
-{- | Constraint for containers that can be hashed with HalfSipHash.
-
-Requires @ToWords@ for the element type.
--}
+-- | Constraint synonym for containers hashed with HalfSipHash.
 type HalfSipHashData a = (MonoFoldable a, ToWords (Element a))
 
 -- | HalfSipHash internal state, consisting of four 32-bit words.
@@ -72,14 +65,9 @@ data HalfSipData = HalfSipData
     , hv3 :: {-# UNPACK #-} !Word32
     }
 
-{- | Streaming HalfSipHash state.
-
-The input is consumed one byte at a time, so memory use is constant
-regardless of input size.
--}
+-- | Internal HalfSipHash accumulator.
 data HalfSipStream = HalfSipStream
     { hsData :: {-# UNPACK #-} !HalfSipData
-    -- ^ Current hash state.
     , hsWord :: {-# UNPACK #-} !Word32
     -- ^ Input bytes buffered so far, in little-endian order.
     , hsCount :: {-# UNPACK #-} !Int
@@ -136,7 +124,7 @@ halfSipHash c d key mono =
             }
 {-# INLINEABLE halfSipHash #-}
 
--- | Feed one input byte into the stream, compressing every full 32-bit word.
+-- | Buffer input bytes, compressing each full 32-bit word.
 step :: Word -> HalfSipStream -> Word8 -> HalfSipStream
 step c HalfSipStream{hsData = d, hsWord = word, hsCount = n, hsLen = len} !b =
     let word' = word .|. (fromIntegral b `shiftL` (8 * n))
@@ -146,7 +134,6 @@ step c HalfSipStream{hsData = d, hsWord = word, hsCount = n, hsLen = len} !b =
             else HalfSipStream{hsData = d, hsWord = word', hsCount = n + 1, hsLen = len'}
 {-# INLINE step #-}
 
--- | Compress one 32-bit input word into the hash state.
 compress :: Word -> HalfSipData -> Word32 -> HalfSipData
 compress c (HalfSipData !v0 !v1 !v2 !v3) m =
     let v3' = v3 `xor` m
@@ -155,7 +142,7 @@ compress c (HalfSipData !v0 !v1 !v2 !v3) m =
      in HalfSipData v0'' v1' v2' v3''
 {-# INLINE compress #-}
 
--- | One full HalfSipHash round (two half-rounds).
+-- | One full round, made of two half-rounds.
 halfSipRound :: HalfSipData -> HalfSipData
 halfSipRound (HalfSipData !v0 !v1 !v2 !v3) =
     let v0' = v0 + v1
@@ -175,23 +162,12 @@ halfSipRound (HalfSipData !v0 !v1 !v2 !v3) =
      in HalfSipData v0''' v1'''' v2''' v3''''
 {-# INLINE halfSipRound #-}
 
-{- | Apply 'halfSipRound' @n@ times.
-
-This is the general fallback. It is self-recursive, so GHC treats it as a
-loop breaker and never inlines or unrolls it, even when @n@ is a literal.
--}
+-- | Apply 'halfSipRound' @n@ times.
 halfSipRoundN :: Word -> HalfSipData -> HalfSipData
 halfSipRoundN 0 !x = x
 halfSipRoundN n !x = halfSipRoundN (n - 1) $! halfSipRound x
 
-{- | Apply 'halfSipRound' @n@ times, with unrolled cases for the small counts
-used in practice (HalfSipHash-2-4 uses 2 and 4).
-
-Unlike 'halfSipRoundN' this function is not recursive, so the @INLINE@
-pragma is honoured: calls with a small @n@ become straight-line code instead
-of a call to a loop. (When @n@ is a known literal the case can fold away as
-well.)
--}
+-- | Unrolled variant of 'halfSipRoundN' for the small counts used in practice.
 halfSipRounds :: Word -> HalfSipData -> HalfSipData
 halfSipRounds 1 !x = halfSipRound x
 halfSipRounds 2 !x = halfSipRound (halfSipRound x)
