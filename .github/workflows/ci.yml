@@ -21,7 +21,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install fourmolu
-        run: ghcup install fourmolu 0.21.0.0 --set
+        run: |
+          ghcup config add-release-channel 3rdparty
+          ghcup install fourmolu 0.21.0.0 --set
       - name: Check formatting
         run: fourmolu --mode check $(git ls-files '*.hs')
 
@@ -32,7 +34,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install hlint
-        run: ghcup install hlint 3.10 --set
+        run: |
+          ghcup config add-release-channel 3rdparty
+          ghcup install hlint 3.10 --set
       - name: Run hlint
         run: hlint src test bench
 
