@@ -91,10 +91,10 @@ import Data.Word (Word32, Word64)
 -- FNV-1a with a 64-bit result
 fnv1a @Word64 ("hello" :: Text)
 
--- SipHash-2-4 with the reference 128-bit key and a 64-bit result
+-- SipHash-2-4 with a 128-bit key and a 64-bit result
 sipHash @Word64 2 4 (0x000102030405060708090a0b0c0d0e0f :: Word128) ("hello" :: Text)
 
--- HalfSipHash-2-4 with the reference 64-bit key and a 32-bit result
+-- HalfSipHash-2-4 with a 64-bit key and a 32-bit result
 halfSipHash @Word32 2 4 (0x0001020304050607 :: Word64) ("hello" :: Text)
 ```
 
