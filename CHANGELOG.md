@@ -1,5 +1,10 @@
 # Revision history for mono-hash
 
+## 0.1.0.1 -- 2026-10-25
+
+* Documentation: credit the authors of FNV and SipHash/HalfSipHash.
+* Add the "Hash" category to the package's cabal file
+
 ## 0.1.0.0 -- 2026-10-25
 
 * First release.
