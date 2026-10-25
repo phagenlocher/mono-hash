@@ -1,6 +1,12 @@
 {-# LANGUAGE BangPatterns #-}
 
--- | FNV-1 and FNV-1a hashes for any 'MonoFoldable' container.
+{- | FNV-1 and FNV-1a hashes for any 'MonoFoldable' container.
+
+Designed by Glenn Fowler, Landon Curt Noll, and Kiem-Phong Vo, after whom
+the hash is named. See
+<https://datatracker.ietf.org/doc/html/draft-eastlake-fnv-17 The FNV
+Non-Cryptographic Hash Algorithm>.
+-}
 module Data.Hash.Mono.FNV (
     FNVData,
     FNVResult,
