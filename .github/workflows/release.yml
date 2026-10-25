@@ -1,0 +1,133 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+env:
+  GHC_VERSION: "9.10.3"
+  CABAL_VERSION: "3.16.1.0"
+
+jobs:
+  assets:
+    name: sdist and docs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Check tag against version
+        id: version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+
+          version=$(sed -n 's/^version:[[:space:]]*//p' mono-hash.cabal | head -n1 | tr -d '[:space:]')
+          if [ -z "$version" ]; then
+            echo "::error::could not read the version from mono-hash.cabal"
+            exit 1
+          fi
+
+          if [ "$TAG" != "v${version}" ]; then
+            echo "::error::release tag ${TAG} does not match mono-hash.cabal (expected v${version})"
+            exit 1
+          fi
+
+          if ! tagged=$(git rev-list -n1 "refs/tags/${TAG}"); then
+            echo "::error::tag ${TAG} does not exist in this checkout"
+            exit 1
+          fi
+          if [ "$tagged" != "$(git rev-parse HEAD)" ]; then
+            echo "::error::tag ${TAG} points at ${tagged}, not at the checked out commit $(git rev-parse HEAD)"
+            exit 1
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: haskell-actions/setup@v2
+        with:
+          ghc-version: ${{ env.GHC_VERSION }}
+          cabal-version: ${{ env.CABAL_VERSION }}
+
+      - name: Restore cabal store
+        uses: actions/cache@v4
+        with:
+          path: ~/.cabal/store
+          key: ${{ runner.os }}-ghc-${{ env.GHC_VERSION }}-${{ hashFiles('mono-hash.cabal') }}
+          restore-keys: ${{ runner.os }}-ghc-${{ env.GHC_VERSION }}-
+
+      - name: Update package index
+        run: cabal update
+
+      - name: Check package
+        run: cabal check
+
+      - name: Build sdist
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          cabal sdist -o "$RUNNER_TEMP/sdist"
+          test -f "$RUNNER_TEMP/sdist/mono-hash-${VERSION}.tar.gz"
+
+      - name: Test and document the sdist
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/build"
+          tar -xzf "$RUNNER_TEMP/sdist/mono-hash-${VERSION}.tar.gz" -C "$RUNNER_TEMP/build"
+          cd "$RUNNER_TEMP/build/mono-hash-${VERSION}"
+          cabal build all --enable-tests --enable-benchmarks
+          cabal test all --test-show-details=direct
+          cabal haddock --haddock-for-hackage --enable-doc
+          docs=$(find "$RUNNER_TEMP/build" -type f -name '*-docs.tar.gz' | head -n1)
+          if [ -z "$docs" ]; then
+            echo "::error::cabal did not produce a Haddock tarball"
+            exit 1
+          fi
+          cp "$docs" "$RUNNER_TEMP/sdist/mono-hash-${VERSION}-docs.tar.gz"
+          test -f "$RUNNER_TEMP/sdist/mono-hash-${VERSION}-docs.tar.gz"
+
+      - name: Attach tarballs to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          sdist="$RUNNER_TEMP/sdist/mono-hash-${VERSION}.tar.gz"
+          docs="$RUNNER_TEMP/sdist/mono-hash-${VERSION}-docs.tar.gz"
+          test -f "$sdist"
+          test -f "$docs"
+          gh release upload "$TAG" "$sdist" "$docs" --clobber
+
+      - name: Summarize
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOF
+          ## mono-hash ${VERSION} release assets
+
+          Attached to https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG}
+
+          \`\`\`
+          $(cd "$RUNNER_TEMP/sdist" && sha256sum mono-hash-*.tar.gz)
+          \`\`\`
+
+          Upload by hand: \`cabal upload --candidate\` both tarballs, inspect the
+          candidate, then \`cabal upload --publish\`.
+          EOF
