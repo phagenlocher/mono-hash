@@ -10,7 +10,70 @@ fixed-width words.
 
 ## Motivation
 
-This library allows to hash data in monomorphic containers irrespective of their structure. This is helpful when changing container types but keeping the exact same bytes in a structure like changing a `[Word8]` to a `ByteString` while using equal contents.
+This library hashes data in monomorphic containers irrespective of their
+structure. Because only the concatenated element bytes matter, changing the
+container while keeping the same bytes leaves the hash unchanged. Below, the
+`ByteString` and `Vector Word64` hold exactly the same bytes; each formatted
+line of the `ByteString` is one `Word64` in the vector:
+
+```haskell
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE TypeApplications #-}
+
+import qualified Data.ByteString as BS
+import qualified Data.Vector as V
+import Data.Hash.Mono.SipHash (sipHash)
+import Data.Tree (Tree (..))
+import Data.WideWord.Word128 (Word128)
+import Data.Word (Word32, Word64)
+
+key :: Word128
+key = 0x000102030405060708090a0b0c0d0e0f
+
+bytes :: BS.ByteString
+bytes =
+    BS.pack
+        [ 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77
+        , 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff
+        , 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef
+        ]
+
+vector :: V.Vector Word64
+vector =
+    V.fromList
+        [ 0x00_11_22_33_44_55_66_77
+        , 0x88_99_aa_bb_cc_dd_ee_ff
+        , 0x01_23_45_67_89_ab_cd_ef
+        ]
+
+sipHash @Word64 2 4 key bytes
+-- 0x6d003ad777121d05
+
+sipHash @Word64 2 4 key vector
+-- 0x6d003ad777121d05
+```
+
+The same works for any `MonoFoldable`. `Data.Tree.Tree` from `containers`
+already has a `MonoFoldable` instance in `mono-traversable`, and it folds in
+pre-order:
+
+```haskell
+-- Pre-order traversal: the same 24 bytes as six Word32s.
+tree :: Tree Word32
+tree =
+    Node
+        0x00_11_22_33
+        [ Node 0x44_55_66_77 []
+        , Node 0x88_99_aa_bb []
+        , Node 0xcc_dd_ee_ff
+            [ Node 0x01_23_45_67 []
+            , Node 0x89_ab_cd_ef []
+            ]
+        ]
+
+sipHash @Word64 2 4 key tree
+-- 0x6d003ad777121d05
+```
 
 ## Usage
 
