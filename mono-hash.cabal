@@ -8,7 +8,7 @@ license: BSD-3-Clause
 license-file: LICENSE
 author: Philipp Hagenlocher
 maintainer: me@philipphagenlocher.de
-category: Data
+category: Data, Hash
 build-type: Simple
 homepage: https://github.com/phagenlocher/mono-hash#readme
 bug-reports: https://github.com/phagenlocher/mono-hash/issues

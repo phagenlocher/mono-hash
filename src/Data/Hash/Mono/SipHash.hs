@@ -3,7 +3,12 @@
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
 
--- | SipHash-@c@-@d@ for any 'MonoFoldable' container.
+{- | SipHash-@c@-@d@ for any 'MonoFoldable' container.
+
+Designed by Jean-Philippe Aumasson and Daniel J. Bernstein. See
+<https://eprint.iacr.org/2012/351 SipHash: a fast short-input PRF> and the
+<https://github.com/veorq/SipHash reference implementation>.
+-}
 module Data.Hash.Mono.SipHash (
     SipHashData,
     SipHashResult,

@@ -3,7 +3,15 @@
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
 
--- | HalfSipHash-@c@-@d@ for any 'MonoFoldable' container.
+{- | HalfSipHash-@c@-@d@ for any 'MonoFoldable' container.
+
+HalfSipHash is the 32-bit-word variant of SipHash, a PRF family designed by
+Jean-Philippe Aumasson and Daniel J. Bernstein. HalfSipHash itself is not
+described in the SipHash paper; see
+<https://eprint.iacr.org/2012/351 SipHash: a fast short-input PRF> for the
+design and the <https://github.com/veorq/SipHash reference implementation>
+for the variants.
+-}
 module Data.Hash.Mono.HalfSipHash (
     HalfSipHashData,
     HalfSipHashResult,
