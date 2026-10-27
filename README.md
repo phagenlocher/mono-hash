@@ -109,7 +109,7 @@ The result type is selected with a type application (or type inference of course
 ## Encoding and byte order
 
 Hashing is defined over the concatenation of the elements' byte encodings.
-The encoding is not type-tagged, so `[0x01, 0x02 :: Word8]` and
+By design, the encoding is not type-tagged, so `[0x01, 0x02 :: Word8]` and
 `[0x0102 :: Word16]` hash the same bytes.
 
 `Word8` and `Int8` contribute one byte. Wider integers contribute
@@ -127,6 +127,8 @@ Give the element type a `ByteFoldable` instance to hash containers of your
 own type:
 
 ```haskell
+{-# LANGUAGE TypeApplications #-}
+
 import Data.Hash.Mono.FNV (fnv1a)
 import Data.Hash.Mono.Internal.ByteFoldable (ByteFoldable (..))
 import Data.Word (Word8, Word64)
@@ -142,6 +144,39 @@ fnv1a @Word64 [Rgb 0x12 0x34 0x56]
 
 The bytes an instance emits are the bytes hashed, so changing an instance
 changes every hash of containers holding that element type.
+
+Because the encoding is untagged (see above), two element types with the same
+underlying bytes hash alike. An instance can prevent this by folding a tag
+byte of its own. Here `Rgb` and `Hsl` both hold three `Word8`, yet `0x01` and
+`0x02` keep their encodings apart:
+
+```haskell
+{-# LANGUAGE TypeApplications #-}
+
+import Data.Hash.Mono.FNV (fnv1a)
+import Data.Hash.Mono.Internal.ByteFoldable (ByteFoldable (..))
+import Data.Word (Word8, Word64)
+
+data Rgb = Rgb Word8 Word8 Word8
+
+data Hsl = Hsl Word8 Word8 Word8
+
+instance ByteFoldable Rgb where
+    foldlBytes f z (Rgb r g b) = f (f (f (f z 0x01) r) g) b
+
+instance ByteFoldable Hsl where
+    foldlBytes f z (Hsl h s l) = f (f (f (f z 0x02) h) s) l
+
+fnv1a @Word64 [Rgb 0x12 0x34 0x56]
+-- 0x49593a77a021b074
+
+fnv1a @Word64 [Hsl 0x12 0x34 0x56]
+-- 0x292dee90a2ab967f
+```
+
+Tags are a convention of the instance and are worth it when distinct types with
+overlapping byte layouts would otherwise collide, such as values in a sum
+type or records that share a shape.
 
 ## Formatting and linting
 
