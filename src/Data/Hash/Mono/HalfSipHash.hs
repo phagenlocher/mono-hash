@@ -20,10 +20,9 @@ module Data.Hash.Mono.HalfSipHash (
 where
 
 import Data.Bits (Bits (rotateL, shiftL, shiftR, xor, (.&.), (.|.)))
-import Data.Hash.Mono.Internal (byteSwap32)
 import Data.Hash.Mono.Internal.ByteFoldable (ByteFoldable (..))
 import Data.MonoTraversable (Element, MonoFoldable (ofoldl'))
-import Data.Word (Word32, Word64, Word8)
+import Data.Word (Word32, Word64, Word8, byteSwap32)
 
 -- | Result types that 'halfSipHash' can produce.
 class HalfSipHashResult a where

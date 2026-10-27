@@ -17,11 +17,10 @@ module Data.Hash.Mono.SipHash (
 where
 
 import Data.Bits (Bits (rotateL, shiftL, xor, (.|.)))
-import Data.Hash.Mono.Internal (byteSwap64)
 import Data.Hash.Mono.Internal.ByteFoldable (ByteFoldable (..))
 import Data.MonoTraversable (Element, MonoFoldable (ofoldl'))
 import Data.WideWord.Word128 (Word128 (..))
-import Data.Word (Word64, Word8)
+import Data.Word (Word64, Word8, byteSwap64)
 
 -- | Result types that 'sipHash' can produce.
 class SipHashResult a where

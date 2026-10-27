@@ -1,5 +1,9 @@
 # Revision history for mono-hash
 
+## 0.1.0.2 -- 2026-10-27
+
+* Internal: replace the hand-rolled `byteSwap32`/`byteSwap66` from `Data.Hash.Mono.Internal` with the equivalents already provided by base in `Data.Word`.
+
 ## 0.1.0.1 -- 2026-10-25
 
 * Documentation: credit the authors of FNV and SipHash/HalfSipHash.
