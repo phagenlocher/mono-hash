@@ -19,7 +19,7 @@ module Data.Hash.Mono.HalfSipHash (
 )
 where
 
-import Data.Bits (Bits (rotateL, shiftL, shiftR, xor, (.&.), (.|.)))
+import Data.Bits (Bits (rotateL, unsafeShiftL, unsafeShiftR, xor, (.&.), (.|.)))
 import Data.Hash.Mono.Internal.ByteFoldable (ByteFoldable (..))
 import Data.MonoTraversable (Element, MonoFoldable (ofoldl'))
 import Data.Word (Word32, Word64, Word8, byteSwap32)
@@ -54,7 +54,7 @@ instance HalfSipHashResult Word64 where
             v1'' = v1' `xor` 0xdd
             (HalfSipData _ !v1''' _ !v3'') = halfSipRounds d (HalfSipData v0' v1'' v2'' v3')
             word1 = v1''' `xor` v3''
-         in (fromIntegral word1 `shiftL` 32) + fromIntegral word0
+         in (fromIntegral word1 `unsafeShiftL` 32) + fromIntegral word0
 
 -- | Constraint for containers hashed with HalfSipHash.
 type HalfSipHashData a = (MonoFoldable a, ByteFoldable (Element a))
@@ -100,7 +100,7 @@ halfSipHash :: forall result mono. (HalfSipHashData mono, HalfSipHashResult resu
 halfSipHash c d key mono =
     case ofoldl' (foldlBytes (step c)) initStream mono of
         HalfSipStream{hsData = state, hsWord = word, hsLen = len} ->
-            finalization d (compress c state (word .|. (fromIntegral len `shiftL` 24)))
+            finalization d (compress c state (word .|. (fromIntegral len `unsafeShiftL` 24)))
   where
     initData :: HalfSipData
     initData =
@@ -112,7 +112,7 @@ halfSipHash c d key mono =
             }
       where
         k0 :: Word32
-        k0 = byteSwap32 . fromIntegral $ key `shiftR` 32
+        k0 = byteSwap32 . fromIntegral $ key `unsafeShiftR` 32
 
         k1 :: Word32
         k1 = byteSwap32 . fromIntegral $ key .&. 0xffffffff
@@ -129,7 +129,7 @@ halfSipHash c d key mono =
 
 step :: Word -> HalfSipStream -> Word8 -> HalfSipStream
 step c HalfSipStream{hsData = d, hsWord = word, hsCount = n, hsLen = len} !b =
-    let word' = word .|. (fromIntegral b `shiftL` (8 * n))
+    let word' = word .|. (fromIntegral b `unsafeShiftL` (8 * n))
         len' = len + 1
      in if n == 3
             then HalfSipStream{hsData = compress c d word', hsWord = 0, hsCount = 0, hsLen = len'}
