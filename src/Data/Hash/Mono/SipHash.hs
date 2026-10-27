@@ -16,12 +16,11 @@ module Data.Hash.Mono.SipHash (
 )
 where
 
-import Data.Bits (Bits (rotateL, shiftL, xor, (.|.)))
-import Data.Hash.Mono.Internal (byteSwap64)
+import Data.Bits (Bits (rotateL, unsafeShiftL, xor, (.|.)))
 import Data.Hash.Mono.Internal.ByteFoldable (ByteFoldable (..))
 import Data.MonoTraversable (Element, MonoFoldable (ofoldl'))
 import Data.WideWord.Word128 (Word128 (..))
-import Data.Word (Word64, Word8)
+import Data.Word (Word64, Word8, byteSwap64)
 
 -- | Result types that 'sipHash' can produce.
 class SipHashResult a where
@@ -99,7 +98,7 @@ sipHash :: forall result mono. (SipHashData mono, SipHashResult result) => Word 
 sipHash c d key mono =
     case ofoldl' (foldlBytes (step c)) initStream mono of
         SipStream{ssData = state, ssWord = word, ssLen = len} ->
-            finalization d (compress c state (word .|. (fromIntegral len `shiftL` 56)))
+            finalization d (compress c state (word .|. (fromIntegral len `unsafeShiftL` 56)))
   where
     initData :: SipData
     initData =
@@ -128,7 +127,7 @@ sipHash c d key mono =
 
 step :: Word -> SipStream -> Word8 -> SipStream
 step c SipStream{ssData = d, ssWord = word, ssCount = n, ssLen = len} !b =
-    let word' = word .|. (fromIntegral b `shiftL` (8 * n))
+    let word' = word .|. (fromIntegral b `unsafeShiftL` (8 * n))
         len' = len + 1
      in if n == 7
             then SipStream{ssData = compress c d word', ssWord = 0, ssCount = 0, ssLen = len'}

@@ -6,7 +6,7 @@ module Data.Hash.Mono.Internal.ByteFoldable (
 )
 where
 
-import Data.Bits (Bits (shiftR, (.&.)))
+import Data.Bits (Bits (unsafeShiftR, (.&.)))
 import Data.Char qualified as Char
 import Data.Int (Int16, Int32, Int64, Int8)
 import Data.WideWord.Word128 (Word128 (..))
@@ -37,23 +37,23 @@ instance ByteFoldable Char where
         | n < 0x80 = f z (fromIntegral n)
         | n < 0x800 =
             f
-                (f z (fromIntegral (0xc0 + (n `shiftR` 6))))
+                (f z (fromIntegral (0xc0 + (n `unsafeShiftR` 6))))
                 (fromIntegral (0x80 + (n .&. 0x3f)))
         | n < 0x10000 =
             f
                 ( f
-                    (f z (fromIntegral (0xe0 + (n `shiftR` 12))))
-                    (fromIntegral (0x80 + ((n `shiftR` 6) .&. 0x3f)))
+                    (f z (fromIntegral (0xe0 + (n `unsafeShiftR` 12))))
+                    (fromIntegral (0x80 + ((n `unsafeShiftR` 6) .&. 0x3f)))
                 )
                 (fromIntegral (0x80 + (n .&. 0x3f)))
         | otherwise =
             f
                 ( f
                     ( f
-                        (f z (fromIntegral (0xf0 + (n `shiftR` 18))))
-                        (fromIntegral (0x80 + ((n `shiftR` 12) .&. 0x3f)))
+                        (f z (fromIntegral (0xf0 + (n `unsafeShiftR` 18))))
+                        (fromIntegral (0x80 + ((n `unsafeShiftR` 12) .&. 0x3f)))
                     )
-                    (fromIntegral (0x80 + ((n `shiftR` 6) .&. 0x3f)))
+                    (fromIntegral (0x80 + ((n `unsafeShiftR` 6) .&. 0x3f)))
                 )
                 (fromIntegral (0x80 + (n .&. 0x3f)))
       where
@@ -75,7 +75,7 @@ instance ByteFoldable Int8 where
 -- | Encoded as two bytes, most significant first.
 instance ByteFoldable Word16 where
     foldlBytes f z w =
-        f (f z (fromIntegral (w `shiftR` 8))) (fromIntegral w)
+        f (f z (fromIntegral (w `unsafeShiftR` 8))) (fromIntegral w)
     {-# INLINE foldlBytes #-}
 
 {- | Encoded as its two's-complement bit pattern, the same bytes as the
@@ -91,10 +91,10 @@ instance ByteFoldable Word32 where
         f
             ( f
                 ( f
-                    (f z (fromIntegral (w `shiftR` 24)))
-                    (fromIntegral (w `shiftR` 16))
+                    (f z (fromIntegral (w `unsafeShiftR` 24)))
+                    (fromIntegral (w `unsafeShiftR` 16))
                 )
-                (fromIntegral (w `shiftR` 8))
+                (fromIntegral (w `unsafeShiftR` 8))
             )
             (fromIntegral w)
     {-# INLINE foldlBytes #-}
@@ -116,18 +116,18 @@ instance ByteFoldable Word64 where
                         ( f
                             ( f
                                 ( f
-                                    (f z (fromIntegral (w `shiftR` 56)))
-                                    (fromIntegral (w `shiftR` 48))
+                                    (f z (fromIntegral (w `unsafeShiftR` 56)))
+                                    (fromIntegral (w `unsafeShiftR` 48))
                                 )
-                                (fromIntegral (w `shiftR` 40))
+                                (fromIntegral (w `unsafeShiftR` 40))
                             )
-                            (fromIntegral (w `shiftR` 32))
+                            (fromIntegral (w `unsafeShiftR` 32))
                         )
-                        (fromIntegral (w `shiftR` 24))
+                        (fromIntegral (w `unsafeShiftR` 24))
                     )
-                    (fromIntegral (w `shiftR` 16))
+                    (fromIntegral (w `unsafeShiftR` 16))
                 )
-                (fromIntegral (w `shiftR` 8))
+                (fromIntegral (w `unsafeShiftR` 8))
             )
             (fromIntegral w)
     {-# INLINE foldlBytes #-}

@@ -1,5 +1,10 @@
 # Revision history for mono-hash
 
+## 0.1.0.2 -- 2026-10-27
+
+* Internal: replace the hand-rolled `byteSwap32`/`byteSwap64` from `Data.Hash.Mono.Internal` with the equivalents already provided by base in `Data.Word`.
+* Performance: use unchecked shifts (`unsafeShiftL`/`unsafeShiftR`) instead of the bounds-checked `shiftL`/`shiftR` in the byte encoders and in the SipHash/HalfSipHash inner loop.
+
 ## 0.1.0.1 -- 2026-10-25
 
 * Documentation: credit the authors of FNV and SipHash/HalfSipHash.
