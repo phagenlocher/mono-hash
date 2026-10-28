@@ -1,4 +1,7 @@
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE KindSignatures #-}
 
 -- | Byte encoding for types.
 module Data.Hash.Mono.Internal.ByteFoldable (
@@ -9,9 +12,24 @@ where
 import Data.Bits (Bits (unsafeShiftR, (.&.)))
 import Data.Char qualified as Char
 import Data.Int (Int16, Int32, Int64, Int8)
+#if !MIN_VERSION_base(4,19,0)
+import Data.Kind (Constraint)
+#endif
 import Data.WideWord.Word128 (Word128 (..))
 import Data.WideWord.Word256 (Word256 (..))
 import Data.Word (Word16, Word32, Word64, Word8)
+#if MIN_VERSION_base(4,19,0)
+import GHC.TypeError (ErrorMessage (Text), Unsatisfiable)
+#else
+import GHC.TypeLits (ErrorMessage (Text), TypeError)
+#endif
+import Numeric.Natural (Natural)
+
+#if MIN_VERSION_base(4,19,0)
+type AntiInstance msg = Unsatisfiable msg
+#else
+type AntiInstance msg = TypeError msg :: Constraint
+#endif
 
 {- | Types with a fixed byte encoding.
 
@@ -161,3 +179,66 @@ instance ByteFoldable Word256 where
             )
             (word256lo w)
     {-# INLINE foldlBytes #-}
+
+{- | Anti-instance: 'Int' is as wide as a machine word, so its byte encoding
+would differ between platforms. Use a fixed-width type such as 'Int32' or
+'Int64' instead.
+-}
+instance
+    ( AntiInstance
+        ( 'Text
+            "ByteFoldable for Int cannot exist: Int is platform-dependent; use Int32 or Int64 instead."
+        )
+    ) =>
+    ByteFoldable Int
+#if !MIN_VERSION_base(4,19,0)
+    where
+    foldlBytes _ _ _ = error "ByteFoldable Int: unreachable"
+#endif
+
+{- | Anti-instance: 'Word' is as wide as a machine word, so its byte encoding
+would differ between platforms. Use a fixed-width type such as 'Word32' or
+'Word64' instead.
+-}
+instance
+    ( AntiInstance
+        ( 'Text
+            "ByteFoldable for Word cannot exist: Word is platform-dependent; use Word32 or Word64 instead."
+        )
+    ) =>
+    ByteFoldable Word
+#if !MIN_VERSION_base(4,19,0)
+    where
+    foldlBytes _ _ _ = error "ByteFoldable Word: unreachable"
+#endif
+
+{- | Anti-instance: 'Integer' is arbitrary-precision and has no fixed width,
+so it has no fixed byte encoding. Use a fixed-width integer type instead.
+-}
+instance
+    ( AntiInstance
+        ( 'Text
+            "ByteFoldable for Integer cannot exist: Integer is arbitrary-precision; use a fixed-width integer type instead."
+        )
+    ) =>
+    ByteFoldable Integer
+#if !MIN_VERSION_base(4,19,0)
+    where
+    foldlBytes _ _ _ = error "ByteFoldable Integer: unreachable"
+#endif
+
+{- | Anti-instance: 'Natural' is arbitrary-precision and has no fixed width,
+so it has no fixed byte encoding. Use a fixed-width unsigned integer type
+instead.
+-}
+instance
+    ( AntiInstance
+        ( 'Text
+            "ByteFoldable for Natural cannot exist: Natural is arbitrary-precision; use a fixed-width unsigned integer type instead."
+        )
+    ) =>
+    ByteFoldable Natural
+#if !MIN_VERSION_base(4,19,0)
+    where
+    foldlBytes _ _ _ = error "ByteFoldable Natural: unreachable"
+#endif
