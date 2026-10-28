@@ -1,7 +1,10 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE KindSignatures #-}
+#if !MIN_VERSION_base(4,19,0)
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
+#endif
 
 -- | Byte encoding for types.
 module Data.Hash.Mono.Internal.ByteFoldable (
@@ -28,7 +31,10 @@ import Numeric.Natural (Natural)
 #if MIN_VERSION_base(4,19,0)
 type AntiInstance msg = Unsatisfiable msg
 #else
-type AntiInstance msg = TypeError msg :: Constraint
+-- A type synonym here would make older GHC report the TypeError eagerly at
+-- the synonym declaration; a type family only expands it at the use site.
+type family AntiInstance msg :: Constraint where
+    AntiInstance msg = TypeError msg
 #endif
 
 {- | Types with a fixed byte encoding.
