@@ -1,6 +1,6 @@
 cabal-version: 3.0
 name: mono-hash
-version: 0.1.0.2
+version: 0.1.1.0
 synopsis: Hashing for monomorphic containers.
 description:
   FNV, SipHash, and HalfSipHash hashing for monomorphic containers.

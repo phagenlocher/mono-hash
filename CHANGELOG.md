@@ -1,5 +1,9 @@
 # Revision history for mono-hash
 
+## 0.1.1.0 -- 2026-10-28
+
+* Add anti-instances for `ByteFoldable` w.r.t. `Int`, `Word`, `Integer`, and `Natural`.
+
 ## 0.1.0.2 -- 2026-10-27
 
 * Internal: replace the hand-rolled `byteSwap32`/`byteSwap64` from `Data.Hash.Mono.Internal` with the equivalents already provided by base in `Data.Word`.
