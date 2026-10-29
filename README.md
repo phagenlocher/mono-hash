@@ -3,18 +3,11 @@
 [![Hackage](https://img.shields.io/hackage/v/mono-hash.svg)](https://hackage.haskell.org/package/mono-hash)
 [![Haskell-CI](https://github.com/phagenlocher/mono-hash/actions/workflows/haskell-ci.yml/badge.svg?branch=main)](https://github.com/phagenlocher/mono-hash/actions/workflows/haskell-ci.yml)
 
-Hashing for monomorphic containers: FNV-1/FNV-1a, SipHash, and HalfSipHash for
-any [`MonoFoldable`](https://hackage.haskell.org/package/mono-traversable/docs/Data-MonoTraversable.html#t:MonoFoldable),
-including `ByteString`, lazy `ByteString`, `Text`, `String`, and lists of
-fixed-width words.
+Hashing for monomorphic containers: FNV-1/FNV-1a, SipHash, and HalfSipHash for any [`MonoFoldable`](https://hackage.haskell.org/package/mono-traversable/docs/Data-MonoTraversable.html#t:MonoFoldable), including `ByteString`, lazy `ByteString`, `Text`, `String`, and lists of fixed-width words.
 
 ## Motivation
 
-This library hashes data in monomorphic containers irrespective of their
-structure. Because only the concatenated element bytes matter, changing the
-container while keeping the same bytes leaves the hash unchanged. Below, the
-`ByteString` and `Vector Word64` hold exactly the same bytes; each formatted
-line of the `ByteString` is one `Word64` in the vector:
+This library hashes data in monomorphic containers irrespective of their structure. Because only the concatenated element bytes matter, changing the container while keeping the same bytes leaves the hash unchanged. Below, the `ByteString` and `Vector Word64` hold exactly the same bytes; each formatted line of the `ByteString` is one `Word64` in the vector:
 
 ```haskell
 {-# LANGUAGE NumericUnderscores #-}
@@ -53,9 +46,7 @@ sipHash @Word64 2 4 key vector
 -- 0x6d003ad777121d05
 ```
 
-The same works for any `MonoFoldable`. `Data.Tree.Tree` from `containers`
-already has a `MonoFoldable` instance in `mono-traversable`, and it folds in
-pre-order:
+The same works for any `MonoFoldable`. `Data.Tree.Tree` from `containers` already has a `MonoFoldable` instance in `mono-traversable`, and it folds in pre-order:
 
 ```haskell
 -- Pre-order traversal: the same 24 bytes as six Word32s.
@@ -108,23 +99,13 @@ The result type is selected with a type application (or type inference of course
 
 ## Encoding and byte order
 
-Hashing is defined over the concatenation of the elements' byte encodings.
-By design, the encoding is not type-tagged, so `[0x01, 0x02 :: Word8]` and
-`[0x0102 :: Word16]` hash the same bytes.
+Hashing is defined over the concatenation of the elements' byte encodings. By design, the encoding is not type-tagged, so `[0x01, 0x02 :: Word8]` and `[0x0102 :: Word16]` hash the same bytes.
 
-`Word8` and `Int8` contribute one byte. Wider integers contribute
-their bit pattern most significant byte first; signed integers use two's
-complement. `Char` contributes UTF-8; a lone surrogate, which `String` can
-contain but UTF-8 cannot represent, uses the 3-byte
-[WTF-8](https://wtf-8.codeberg.page) form. `String` and `Text` are
-hashed character by character, while `ByteString` contributes its raw bytes.
-The library provides instances for `Word8`, `Word16`, `Word32`, `Word64`,
-`Word128`, `Word256`, `Int8`, `Int16`, `Int32`, `Int64`, and `Char`.
+`Word8` and `Int8` contribute one byte. Wider integers contribute their bit pattern most significant byte first; signed integers use two's complement. `Char` contributes UTF-8; a lone surrogate, which `String` can contain but UTF-8 cannot represent, uses the 3-byte [WTF-8](https://wtf-8.codeberg.page) form. `String` and `Text` are hashed character by character, while `ByteString` contributes its raw bytes.
 
 ## Custom element types
 
-Give the element type a `ByteFoldable` instance to hash containers of your
-own type:
+Give the element type a `ByteFoldable` instance to hash containers of your own type:
 
 ```haskell
 {-# LANGUAGE TypeApplications #-}
@@ -142,13 +123,9 @@ instance ByteFoldable Rgb where
 fnv1a @Word64 [Rgb 0x12 0x34 0x56]
 ```
 
-The bytes an instance emits are the bytes hashed, so changing an instance
-changes every hash of containers holding that element type.
+The bytes an instance emits are the bytes hashed, so changing an instance changes every hash of containers holding that element type.
 
-Because the encoding is untagged (see above), two element types with the same
-underlying bytes hash alike. An instance can prevent this by folding a tag
-byte of its own. Here `Rgb` and `Hsl` both hold three `Word8`, yet `0x01` and
-`0x02` keep their encodings apart:
+Because the encoding is untagged (see above), two element types with the same underlying bytes hash alike. An instance can prevent this by folding a tag byte of its own. Here `Rgb` and `Hsl` both hold three `Word8`, yet `0x01` and `0x02` keep their encodings apart:
 
 ```haskell
 {-# LANGUAGE TypeApplications #-}
@@ -174,16 +151,11 @@ fnv1a @Word64 [Hsl 0x12 0x34 0x56]
 -- 0x292dee90a2ab967f
 ```
 
-Tags are a convention of the instance and are worth it when distinct types with
-overlapping byte layouts would otherwise collide, such as values in a sum
-type or records that share a shape.
+Tags are a convention of the instance and are worth it when distinct types with overlapping byte layouts would otherwise collide, such as values in a sum type or records that share a shape.
 
 ## Formatting and linting
 
-Sources are formatted with [fourmolu](https://github.com/fourmolu/fourmolu) and
-linted with [hlint](https://github.com/ndmitchell/hlint). CI checks both, using
-the versions pinned in `.github/workflows/ci.yml`, so run them before opening
-a pull request:
+Sources are formatted with [fourmolu](https://github.com/fourmolu/fourmolu) and linted with [hlint](https://github.com/ndmitchell/hlint). CI checks both, using the versions pinned in `.github/workflows/ci.yml`, so run them before opening a pull request:
 
 ```console
 fourmolu --mode inplace $(git ls-files '*.hs')
