@@ -14,6 +14,8 @@ import Data.Int (Int16, Int32, Int64, Int8)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import Data.WideWord.Int128 (Int128 (..))
+import Data.WideWord.Int256 (Int256 (..))
 import Data.WideWord.Word128 (Word128)
 import Data.WideWord.Word256 (Word256)
 import Data.Word (Word16, Word32, Word64, Word8)
@@ -168,6 +170,39 @@ word256Sample =
         + (fromIntegral (0x4142434445464748 :: Word64) `shiftL` 64)
         + fromIntegral (0x5152535455565758 :: Word64)
 
+-- | Positive value with distinct limbs.
+int128Sample :: Int128
+int128Sample = Int128 0x0102030405060708 0x1112131415161718
+
+-- | Negative value with distinct limbs, exercising sign extension.
+int128Negative :: Int128
+int128Negative = Int128 0xffffffffffffff80 0x0102030405060708
+
+-- | Positive value with distinct limbs.
+int256Sample :: Int256
+int256Sample =
+    Int256
+        0x2122232425262728
+        0x3132333435363738
+        0x4142434445464748
+        0x5152535455565758
+
+-- | Negative value with distinct limbs, exercising sign extension.
+int256Negative :: Int256
+int256Negative =
+    Int256
+        0xffffffffffffffff
+        0x2122232425262728
+        0x3132333435363738
+        0x4142434445464748
+
+-- | The big-endian two's-complement bytes of @-1@, written out by hand.
+int128MinusOneBytes :: BS.ByteString
+int128MinusOneBytes = BS.pack (replicate 16 0xff)
+
+int256MinusOneBytes :: BS.ByteString
+int256MinusOneBytes = BS.pack (replicate 32 0xff)
+
 tests :: TestTree
 tests =
     testGroup
@@ -268,6 +303,13 @@ inputEncoding =
             , testCase "FNV1a Word64 word elements match bytes" $ do
                 fnv1a @Word64 [word128Sample] @?= fnv1a @Word64 (BS.pack (wordBytes 16 word128Sample))
                 fnv1a @Word64 [word256Sample] @?= fnv1a @Word64 (BS.pack (wordBytes 32 word256Sample))
+            , testCase "FNV1a Word64 wide signed elements match two's complement bytes" $ do
+                fnv1a @Word64 [int128Sample] @?= fnv1a @Word64 (BS.pack (wordBytes 16 int128Sample))
+                fnv1a @Word64 [int128Negative] @?= fnv1a @Word64 (BS.pack (wordBytes 16 int128Negative))
+                fnv1a @Word64 [int256Sample] @?= fnv1a @Word64 (BS.pack (wordBytes 32 int256Sample))
+                fnv1a @Word64 [int256Negative] @?= fnv1a @Word64 (BS.pack (wordBytes 32 int256Negative))
+                fnv1a @Word64 [-1 :: Int128] @?= fnv1a @Word64 int128MinusOneBytes
+                fnv1a @Word64 [-1 :: Int256] @?= fnv1a @Word64 int256MinusOneBytes
             , testCase "FNV1 Word64 small word elements match bytes" $ do
                 fnv1 @Word64 word16Samples @?= fnv1 @Word64 (packWords 2 word16Samples)
                 fnv1 @Word64 word32Samples @?= fnv1 @Word64 (packWords 4 word32Samples)
@@ -292,6 +334,13 @@ inputEncoding =
             , testCase "SipHash-2-4 Word64 word elements match bytes" $ do
                 sipHash @Word64 2 4 Test.Data.SipHash.key [word128Sample] @?= sipHash @Word64 2 4 Test.Data.SipHash.key (BS.pack (wordBytes 16 word128Sample))
                 sipHash @Word64 2 4 Test.Data.SipHash.key [word256Sample] @?= sipHash @Word64 2 4 Test.Data.SipHash.key (BS.pack (wordBytes 32 word256Sample))
+            , testCase "SipHash-2-4 Word64 wide signed elements match two's complement bytes" $ do
+                sipHash @Word64 2 4 Test.Data.SipHash.key [int128Sample] @?= sipHash @Word64 2 4 Test.Data.SipHash.key (BS.pack (wordBytes 16 int128Sample))
+                sipHash @Word64 2 4 Test.Data.SipHash.key [int128Negative] @?= sipHash @Word64 2 4 Test.Data.SipHash.key (BS.pack (wordBytes 16 int128Negative))
+                sipHash @Word64 2 4 Test.Data.SipHash.key [int256Sample] @?= sipHash @Word64 2 4 Test.Data.SipHash.key (BS.pack (wordBytes 32 int256Sample))
+                sipHash @Word64 2 4 Test.Data.SipHash.key [int256Negative] @?= sipHash @Word64 2 4 Test.Data.SipHash.key (BS.pack (wordBytes 32 int256Negative))
+                sipHash @Word64 2 4 Test.Data.SipHash.key [-1 :: Int128] @?= sipHash @Word64 2 4 Test.Data.SipHash.key int128MinusOneBytes
+                sipHash @Word64 2 4 Test.Data.SipHash.key [-1 :: Int256] @?= sipHash @Word64 2 4 Test.Data.SipHash.key int256MinusOneBytes
             , testCase "SipHash-2-4 Word64 small word elements match bytes" $ do
                 sipHash @Word64 2 4 Test.Data.SipHash.key word16Samples @?= sipHash @Word64 2 4 Test.Data.SipHash.key (packWords 2 word16Samples)
                 sipHash @Word64 2 4 Test.Data.SipHash.key word32Samples @?= sipHash @Word64 2 4 Test.Data.SipHash.key (packWords 4 word32Samples)
@@ -312,6 +361,13 @@ inputEncoding =
             , testCase "HalfSipHash-2-4 Word32 word elements match bytes" $ do
                 halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key [word128Sample] @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key (BS.pack (wordBytes 16 word128Sample))
                 halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key [word256Sample] @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key (BS.pack (wordBytes 32 word256Sample))
+            , testCase "HalfSipHash-2-4 Word32 wide signed elements match two's complement bytes" $ do
+                halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key [int128Sample] @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key (BS.pack (wordBytes 16 int128Sample))
+                halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key [int128Negative] @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key (BS.pack (wordBytes 16 int128Negative))
+                halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key [int256Sample] @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key (BS.pack (wordBytes 32 int256Sample))
+                halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key [int256Negative] @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key (BS.pack (wordBytes 32 int256Negative))
+                halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key [-1 :: Int128] @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key int128MinusOneBytes
+                halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key [-1 :: Int256] @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key int256MinusOneBytes
             , testCase "HalfSipHash-2-4 Word32 small word elements match bytes" $ do
                 halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key word16Samples @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key (packWords 2 word16Samples)
                 halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key word32Samples @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key (packWords 4 word32Samples)

@@ -1,8 +1,9 @@
 # Revision history for mono-hash
 
-## 0.1.1.0 -- 2026-10-28
+## 0.1.1.0 -- 2026-10-29
 
 * Add anti-instances for `ByteFoldable` w.r.t. `Int`, `Word`, `Integer`, and `Natural`.
+* Add `ByteFoldable` instances for `Int128` and `Int256`.
 
 ## 0.1.0.2 -- 2026-10-27
 

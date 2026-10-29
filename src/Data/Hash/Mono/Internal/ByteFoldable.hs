@@ -18,6 +18,8 @@ import Data.Int (Int16, Int32, Int64, Int8)
 #if !MIN_VERSION_base(4,19,0)
 import Data.Kind (Constraint)
 #endif
+import Data.WideWord.Int128 (Int128 (..))
+import Data.WideWord.Int256 (Int256 (..))
 import Data.WideWord.Word128 (Word128 (..))
 import Data.WideWord.Word256 (Word256 (..))
 import Data.Word (Word16, Word32, Word64, Word8)
@@ -169,6 +171,14 @@ instance ByteFoldable Word128 where
         foldlBytes f (foldlBytes f z (word128Hi64 w)) (word128Lo64 w)
     {-# INLINE foldlBytes #-}
 
+{- | Encoded as its two's-complement bit pattern, the same bytes as the
+corresponding 'Word128'.
+-}
+instance ByteFoldable Int128 where
+    foldlBytes f z i =
+        foldlBytes f (foldlBytes f z (int128Hi64 i)) (int128Lo64 i)
+    {-# INLINE foldlBytes #-}
+
 -- | Encoded as thirty-two bytes, most significant first.
 instance ByteFoldable Word256 where
     foldlBytes f z w =
@@ -184,6 +194,25 @@ instance ByteFoldable Word256 where
                 (word256m0 w)
             )
             (word256lo w)
+    {-# INLINE foldlBytes #-}
+
+{- | Encoded as its two's-complement bit pattern, the same bytes as the
+corresponding 'Word256'.
+-}
+instance ByteFoldable Int256 where
+    foldlBytes f z i =
+        foldlBytes
+            f
+            ( foldlBytes
+                f
+                ( foldlBytes
+                    f
+                    (foldlBytes f z (int256hi i))
+                    (int256m1 i)
+                )
+                (int256m0 i)
+            )
+            (int256lo i)
     {-# INLINE foldlBytes #-}
 
 {- | Anti-instance: 'Int' is as wide as a machine word, so its byte encoding

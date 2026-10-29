@@ -39,7 +39,7 @@ library
   build-depends:
     base >=4.14.3.0 && <5,
     mono-traversable >=1.0.21 && <1.1,
-    wide-word >=0.1.7 && <0.2
+    wide-word >=0.1.9.0 && <0.2
 
   hs-source-dirs: src
 
@@ -76,7 +76,7 @@ test-suite mono-hash-test
     tasty >=1.4 && <1.6,
     tasty-hunit >=0.10 && <0.11,
     text >=1.2 && <2.2,
-    wide-word >=0.1.7 && <0.2,
+    wide-word >=0.1.9.0 && <0.2,
 
 benchmark mono-hash-bench
   type: exitcode-stdio-1.0
@@ -96,4 +96,4 @@ benchmark mono-hash-bench
     deepseq >=1.4 && <1.6,
     mono-hash,
     text >=1.2 && <2.2,
-    wide-word >=0.1.7 && <0.2,
+    wide-word >=0.1.9.0 && <0.2,
