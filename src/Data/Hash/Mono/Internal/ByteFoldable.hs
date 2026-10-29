@@ -23,6 +23,8 @@ import Data.WideWord.Int256 (Int256 (..))
 import Data.WideWord.Word128 (Word128 (..))
 import Data.WideWord.Word256 (Word256 (..))
 import Data.Word (Word16, Word32, Word64, Word8)
+import Foreign.Ptr (FunPtr, IntPtr, Ptr, WordPtr)
+import GHC.Float (castDoubleToWord64, castFloatToWord32)
 #if MIN_VERSION_base(4,19,0)
 import GHC.TypeError (ErrorMessage (Text), Unsatisfiable)
 #else
@@ -85,6 +87,11 @@ instance ByteFoldable Char where
       where
         n :: Int
         n = Char.ord c
+    {-# INLINE foldlBytes #-}
+
+-- | Encoded as one byte, @0x00@ for 'False' and @0x01@ for 'True'.
+instance ByteFoldable Bool where
+    foldlBytes f z b = f z (if b then 0x01 else 0x00)
     {-# INLINE foldlBytes #-}
 
 instance ByteFoldable Word8 where
@@ -163,6 +170,28 @@ corresponding 'Word64'.
 -}
 instance ByteFoldable Int64 where
     foldlBytes f z i = foldlBytes f z (fromIntegral i :: Word64)
+    {-# INLINE foldlBytes #-}
+
+{- | Encoded as its raw IEEE-754 single-precision bit pattern, four bytes, most
+significant first, the same bytes as the corresponding 'Word32'.
+
+The bits are reinterpreted rather than converted, and are never normalized:
+@0.0@ and @-0.0@ encode differently, and NaN payloads (including the sign bit)
+are preserved verbatim.
+-}
+instance ByteFoldable Float where
+    foldlBytes f z x = foldlBytes f z (castFloatToWord32 x)
+    {-# INLINE foldlBytes #-}
+
+{- | Encoded as its raw IEEE-754 double-precision bit pattern, eight bytes, most
+significant first, the same bytes as the corresponding 'Word64'.
+
+The bits are reinterpreted rather than converted, and are never normalized:
+@0.0@ and @-0.0@ encode differently, and NaN payloads (including the sign bit)
+are preserved verbatim.
+-}
+instance ByteFoldable Double where
+    foldlBytes f z x = foldlBytes f z (castDoubleToWord64 x)
     {-# INLINE foldlBytes #-}
 
 -- | Encoded as sixteen bytes, most significant first.
@@ -276,4 +305,68 @@ instance
 #if !MIN_VERSION_base(4,19,0)
     where
     foldlBytes _ _ _ = error "ByteFoldable Natural: unreachable"
+#endif
+
+{- | Anti-instance: 'IntPtr' is as wide as a machine word, so its byte encoding
+would differ between platforms. Convert it to a fixed-width type such as
+'Int32' or 'Int64' instead.
+-}
+instance
+    ( AntiInstance
+        ( 'Text
+            "ByteFoldable for IntPtr cannot exist: IntPtr is platform-dependent; use Int32 or Int64 instead."
+        )
+    ) =>
+    ByteFoldable IntPtr
+#if !MIN_VERSION_base(4,19,0)
+    where
+    foldlBytes _ _ _ = error "ByteFoldable IntPtr: unreachable"
+#endif
+
+{- | Anti-instance: 'WordPtr' is as wide as a machine word, so its byte encoding
+would differ between platforms. Convert it to a fixed-width type such as
+'Word32' or 'Word64' instead.
+-}
+instance
+    ( AntiInstance
+        ( 'Text
+            "ByteFoldable for WordPtr cannot exist: WordPtr is platform-dependent; use Word32 or Word64 instead."
+        )
+    ) =>
+    ByteFoldable WordPtr
+#if !MIN_VERSION_base(4,19,0)
+    where
+    foldlBytes _ _ _ = error "ByteFoldable WordPtr: unreachable"
+#endif
+
+{- | Anti-instance: 'Ptr' is as wide as a machine word, and a pointer value is
+not stable across processes. Convert it to a fixed-width type such as 'Word32'
+or 'Word64' instead.
+-}
+instance
+    ( AntiInstance
+        ( 'Text
+            "ByteFoldable for Ptr cannot exist: pointers are platform-dependent and not stable across processes; convert to Word32 or Word64 instead."
+        )
+    ) =>
+    ByteFoldable (Ptr a)
+#if !MIN_VERSION_base(4,19,0)
+    where
+    foldlBytes _ _ _ = error "ByteFoldable Ptr: unreachable"
+#endif
+
+{- | Anti-instance: 'FunPtr' is as wide as a machine word, and a function
+pointer value is not stable across processes. Convert it to a fixed-width type
+such as 'Word32' or 'Word64' instead.
+-}
+instance
+    ( AntiInstance
+        ( 'Text
+            "ByteFoldable for FunPtr cannot exist: function pointers are platform-dependent and not stable across processes; convert to Word32 or Word64 instead."
+        )
+    ) =>
+    ByteFoldable (FunPtr a)
+#if !MIN_VERSION_base(4,19,0)
+    where
+    foldlBytes _ _ _ = error "ByteFoldable FunPtr: unreachable"
 #endif

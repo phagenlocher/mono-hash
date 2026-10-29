@@ -101,7 +101,7 @@ The result type is selected with a type application (or type inference of course
 
 Hashing is defined over the concatenation of the elements' byte encodings. By design, the encoding is not type-tagged, so `[0x01, 0x02 :: Word8]` and `[0x0102 :: Word16]` hash the same bytes.
 
-`Word8` and `Int8` contribute one byte. Wider integers contribute their bit pattern most significant byte first; signed integers use two's complement. `Char` contributes UTF-8; a lone surrogate, which `String` can contain but UTF-8 cannot represent, uses the 3-byte [WTF-8](https://wtf-8.codeberg.page) form. `String` and `Text` are hashed character by character, while `ByteString` contributes its raw bytes.
+`Word8` and `Int8` contribute one byte. Wider integers contribute their bit pattern most significant byte first; signed integers use two's complement. `Bool` contributes one byte, `0x00` or `0x01`. `Float` and `Double` contribute their raw IEEE-754 bit pattern, four or eight bytes most significant first, so `0.0` and `-0.0` compare equal yet hash differently. `Char` contributes UTF-8; a lone surrogate, which `String` can contain but UTF-8 cannot represent, uses the 3-byte [WTF-8](https://wtf-8.codeberg.page) form. `String` and `Text` are hashed character by character, while `ByteString` contributes its raw bytes.
 
 ## Custom element types
 

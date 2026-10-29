@@ -19,6 +19,7 @@ import Data.WideWord.Int256 (Int256 (..))
 import Data.WideWord.Word128 (Word128)
 import Data.WideWord.Word256 (Word256)
 import Data.Word (Word16, Word32, Word64, Word8)
+import GHC.Float (castDoubleToWord64, castFloatToWord32)
 import qualified Test.Data.ByteFoldable
 import qualified Test.Data.FNV
 import qualified Test.Data.HalfSipHash
@@ -203,6 +204,47 @@ int128MinusOneBytes = BS.pack (replicate 16 0xff)
 int256MinusOneBytes :: BS.ByteString
 int256MinusOneBytes = BS.pack (replicate 32 0xff)
 
+-- | One byte per value, @0x00@ for 'False' and @0x01@ for 'True'.
+boolSamples :: [Bool]
+boolSamples = [False, True]
+
+boolSampleBytes :: BS.ByteString
+boolSampleBytes = BS.pack [0x00, 0x01]
+
+{- | Bit patterns are written out rather than derived, so the test pins the
+big-endian layout and the sign of zero. NaN is left out because its payload is
+target-dependent; it is checked separately.
+-}
+floatSamples :: [Float]
+floatSamples = [0.0, -0.0, 1.0, -1.0, 1 / 0, -(1 / 0), encodeFloat 1 (-149)]
+
+floatSampleBytes :: BS.ByteString
+floatSampleBytes =
+    BS.concat
+        [ BS.pack [0x00, 0x00, 0x00, 0x00] -- 0.0
+        , BS.pack [0x80, 0x00, 0x00, 0x00] -- -0.0
+        , BS.pack [0x3f, 0x80, 0x00, 0x00] -- 1.0
+        , BS.pack [0xbf, 0x80, 0x00, 0x00] -- -1.0
+        , BS.pack [0x7f, 0x80, 0x00, 0x00] -- +Inf
+        , BS.pack [0xff, 0x80, 0x00, 0x00] -- -Inf
+        , BS.pack [0x00, 0x00, 0x00, 0x01] -- smallest positive subnormal
+        ]
+
+doubleSamples :: [Double]
+doubleSamples = [0.0, -0.0, 1.0, -1.0, 1 / 0, -(1 / 0), encodeFloat 1 (-1074)]
+
+doubleSampleBytes :: BS.ByteString
+doubleSampleBytes =
+    BS.concat
+        [ BS.pack [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00] -- 0.0
+        , BS.pack [0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00] -- -0.0
+        , BS.pack [0x3f, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00] -- 1.0
+        , BS.pack [0xbf, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00] -- -1.0
+        , BS.pack [0x7f, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00] -- +Inf
+        , BS.pack [0xff, 0xf0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00] -- -Inf
+        , BS.pack [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01] -- smallest positive subnormal
+        ]
+
 tests :: TestTree
 tests =
     testGroup
@@ -310,6 +352,17 @@ inputEncoding =
                 fnv1a @Word64 [int256Negative] @?= fnv1a @Word64 (BS.pack (wordBytes 32 int256Negative))
                 fnv1a @Word64 [-1 :: Int128] @?= fnv1a @Word64 int128MinusOneBytes
                 fnv1a @Word64 [-1 :: Int256] @?= fnv1a @Word64 int256MinusOneBytes
+            , testCase "FNV1a Word64 Bool elements match bytes" $
+                fnv1a @Word64 boolSamples @?= fnv1a @Word64 boolSampleBytes
+            , testCase "FNV1a Word64 Float elements match IEEE-754 bytes" $
+                fnv1a @Word64 floatSamples @?= fnv1a @Word64 floatSampleBytes
+            , testCase "FNV1a Word64 Double elements match IEEE-754 bytes" $
+                fnv1a @Word64 doubleSamples @?= fnv1a @Word64 doubleSampleBytes
+            , testCase "FNV1a Word64 float NaN bits are preserved" $ do
+                let nanF = 0 / 0 :: Float
+                    nanD = 0 / 0 :: Double
+                fnv1a @Word64 [nanF] @?= fnv1a @Word64 (BS.pack (wordBytes 4 (castFloatToWord32 nanF)))
+                fnv1a @Word64 [nanD] @?= fnv1a @Word64 (BS.pack (wordBytes 8 (castDoubleToWord64 nanD)))
             , testCase "FNV1 Word64 small word elements match bytes" $ do
                 fnv1 @Word64 word16Samples @?= fnv1 @Word64 (packWords 2 word16Samples)
                 fnv1 @Word64 word32Samples @?= fnv1 @Word64 (packWords 4 word32Samples)
@@ -341,6 +394,12 @@ inputEncoding =
                 sipHash @Word64 2 4 Test.Data.SipHash.key [int256Negative] @?= sipHash @Word64 2 4 Test.Data.SipHash.key (BS.pack (wordBytes 32 int256Negative))
                 sipHash @Word64 2 4 Test.Data.SipHash.key [-1 :: Int128] @?= sipHash @Word64 2 4 Test.Data.SipHash.key int128MinusOneBytes
                 sipHash @Word64 2 4 Test.Data.SipHash.key [-1 :: Int256] @?= sipHash @Word64 2 4 Test.Data.SipHash.key int256MinusOneBytes
+            , testCase "SipHash-2-4 Word64 Bool elements match bytes" $
+                sipHash @Word64 2 4 Test.Data.SipHash.key boolSamples @?= sipHash @Word64 2 4 Test.Data.SipHash.key boolSampleBytes
+            , testCase "SipHash-2-4 Word64 Float elements match IEEE-754 bytes" $
+                sipHash @Word64 2 4 Test.Data.SipHash.key floatSamples @?= sipHash @Word64 2 4 Test.Data.SipHash.key floatSampleBytes
+            , testCase "SipHash-2-4 Word64 Double elements match IEEE-754 bytes" $
+                sipHash @Word64 2 4 Test.Data.SipHash.key doubleSamples @?= sipHash @Word64 2 4 Test.Data.SipHash.key doubleSampleBytes
             , testCase "SipHash-2-4 Word64 small word elements match bytes" $ do
                 sipHash @Word64 2 4 Test.Data.SipHash.key word16Samples @?= sipHash @Word64 2 4 Test.Data.SipHash.key (packWords 2 word16Samples)
                 sipHash @Word64 2 4 Test.Data.SipHash.key word32Samples @?= sipHash @Word64 2 4 Test.Data.SipHash.key (packWords 4 word32Samples)
@@ -368,6 +427,12 @@ inputEncoding =
                 halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key [int256Negative] @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key (BS.pack (wordBytes 32 int256Negative))
                 halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key [-1 :: Int128] @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key int128MinusOneBytes
                 halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key [-1 :: Int256] @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key int256MinusOneBytes
+            , testCase "HalfSipHash-2-4 Word32 Bool elements match bytes" $
+                halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key boolSamples @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key boolSampleBytes
+            , testCase "HalfSipHash-2-4 Word32 Float elements match IEEE-754 bytes" $
+                halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key floatSamples @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key floatSampleBytes
+            , testCase "HalfSipHash-2-4 Word32 Double elements match IEEE-754 bytes" $
+                halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key doubleSamples @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key doubleSampleBytes
             , testCase "HalfSipHash-2-4 Word32 small word elements match bytes" $ do
                 halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key word16Samples @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key (packWords 2 word16Samples)
                 halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key word32Samples @?= halfSipHash @Word32 2 4 Test.Data.HalfSipHash.key (packWords 4 word32Samples)

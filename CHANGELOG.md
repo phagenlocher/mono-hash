@@ -2,8 +2,9 @@
 
 ## 0.1.1.0 -- 2026-10-29
 
-* Add anti-instances for `ByteFoldable` w.r.t. `Int`, `Word`, `Integer`, and `Natural`.
-* Add `ByteFoldable` instances for `Int128` and `Int256`.
+* Add anti-instances for `ByteFoldable` w.r.t. `Int`, `Word`, `Ptr`, `FunPtr`, `IntPtr`, `WordPtr`, `Integer`, and `Natural`.
+* Add `ByteFoldable` instances for `Bool`, `Float`, `Double`, `Int128`, and `Int256`.
+* Raise the `wide-word` lower bound to `0.1.9.0`.
 
 ## 0.1.0.2 -- 2026-10-27
 
