@@ -1,5 +1,11 @@
 # Revision history for mono-hash
 
+## 0.1.1.0 -- 2026-10-29
+
+* Add anti-instances for `ByteFoldable` w.r.t. `Int`, `Word`, `Ptr`, `FunPtr`, `IntPtr`, `WordPtr`, `Integer`, and `Natural`.
+* Add `ByteFoldable` instances for `Bool`, `Float`, `Double`, `Int128`, and `Int256`.
+* Raise the `wide-word` lower bound to `0.1.9.0`.
+
 ## 0.1.0.2 -- 2026-10-27
 
 * Internal: replace the hand-rolled `byteSwap32`/`byteSwap64` from `Data.Hash.Mono.Internal` with the equivalents already provided by base in `Data.Word`.

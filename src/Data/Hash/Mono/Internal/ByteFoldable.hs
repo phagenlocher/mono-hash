@@ -1,4 +1,10 @@
+{-# LANGUAGE CPP #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE InstanceSigs #-}
+#if !MIN_VERSION_base(4,19,0)
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
+#endif
 
 -- | Byte encoding for types.
 module Data.Hash.Mono.Internal.ByteFoldable (
@@ -9,9 +15,31 @@ where
 import Data.Bits (Bits (unsafeShiftR, (.&.)))
 import Data.Char qualified as Char
 import Data.Int (Int16, Int32, Int64, Int8)
+#if !MIN_VERSION_base(4,19,0)
+import Data.Kind (Constraint)
+#endif
+import Data.WideWord.Int128 (Int128 (..))
+import Data.WideWord.Int256 (Int256 (..))
 import Data.WideWord.Word128 (Word128 (..))
 import Data.WideWord.Word256 (Word256 (..))
 import Data.Word (Word16, Word32, Word64, Word8)
+import Foreign.Ptr (FunPtr, IntPtr, Ptr, WordPtr)
+import GHC.Float (castDoubleToWord64, castFloatToWord32)
+#if MIN_VERSION_base(4,19,0)
+import GHC.TypeError (ErrorMessage (Text), Unsatisfiable)
+#else
+import GHC.TypeLits (ErrorMessage (Text), TypeError)
+#endif
+import Numeric.Natural (Natural)
+
+#if MIN_VERSION_base(4,19,0)
+type AntiInstance msg = Unsatisfiable msg
+#else
+-- A type synonym here would make older GHC report the TypeError eagerly at
+-- the synonym declaration; a type family only expands it at the use site.
+type family AntiInstance msg :: Constraint where
+    AntiInstance msg = TypeError msg
+#endif
 
 {- | Types with a fixed byte encoding.
 
@@ -59,6 +87,11 @@ instance ByteFoldable Char where
       where
         n :: Int
         n = Char.ord c
+    {-# INLINE foldlBytes #-}
+
+-- | Encoded as one byte, @0x00@ for 'False' and @0x01@ for 'True'.
+instance ByteFoldable Bool where
+    foldlBytes f z b = f z (if b then 0x01 else 0x00)
     {-# INLINE foldlBytes #-}
 
 instance ByteFoldable Word8 where
@@ -139,10 +172,40 @@ instance ByteFoldable Int64 where
     foldlBytes f z i = foldlBytes f z (fromIntegral i :: Word64)
     {-# INLINE foldlBytes #-}
 
+{- | Encoded as its raw IEEE-754 single-precision bit pattern, four bytes, most
+significant first, the same bytes as the corresponding 'Word32'.
+
+The bits are reinterpreted rather than converted, and are never normalized:
+@0.0@ and @-0.0@ encode differently, and NaN payloads (including the sign bit)
+are preserved verbatim.
+-}
+instance ByteFoldable Float where
+    foldlBytes f z x = foldlBytes f z (castFloatToWord32 x)
+    {-# INLINE foldlBytes #-}
+
+{- | Encoded as its raw IEEE-754 double-precision bit pattern, eight bytes, most
+significant first, the same bytes as the corresponding 'Word64'.
+
+The bits are reinterpreted rather than converted, and are never normalized:
+@0.0@ and @-0.0@ encode differently, and NaN payloads (including the sign bit)
+are preserved verbatim.
+-}
+instance ByteFoldable Double where
+    foldlBytes f z x = foldlBytes f z (castDoubleToWord64 x)
+    {-# INLINE foldlBytes #-}
+
 -- | Encoded as sixteen bytes, most significant first.
 instance ByteFoldable Word128 where
     foldlBytes f z w =
         foldlBytes f (foldlBytes f z (word128Hi64 w)) (word128Lo64 w)
+    {-# INLINE foldlBytes #-}
+
+{- | Encoded as its two's-complement bit pattern, the same bytes as the
+corresponding 'Word128'.
+-}
+instance ByteFoldable Int128 where
+    foldlBytes f z i =
+        foldlBytes f (foldlBytes f z (int128Hi64 i)) (int128Lo64 i)
     {-# INLINE foldlBytes #-}
 
 -- | Encoded as thirty-two bytes, most significant first.
@@ -161,3 +224,149 @@ instance ByteFoldable Word256 where
             )
             (word256lo w)
     {-# INLINE foldlBytes #-}
+
+{- | Encoded as its two's-complement bit pattern, the same bytes as the
+corresponding 'Word256'.
+-}
+instance ByteFoldable Int256 where
+    foldlBytes f z i =
+        foldlBytes
+            f
+            ( foldlBytes
+                f
+                ( foldlBytes
+                    f
+                    (foldlBytes f z (int256hi i))
+                    (int256m1 i)
+                )
+                (int256m0 i)
+            )
+            (int256lo i)
+    {-# INLINE foldlBytes #-}
+
+{- | Anti-instance: 'Int' is as wide as a machine word, so its byte encoding
+would differ between platforms. Use a fixed-width type such as 'Int32' or
+'Int64' instead.
+-}
+instance
+    ( AntiInstance
+        ( 'Text
+            "ByteFoldable for Int cannot exist: Int is platform-dependent; use Int32 or Int64 instead."
+        )
+    ) =>
+    ByteFoldable Int
+#if !MIN_VERSION_base(4,19,0)
+    where
+    foldlBytes _ _ _ = error "ByteFoldable Int: unreachable"
+#endif
+
+{- | Anti-instance: 'Word' is as wide as a machine word, so its byte encoding
+would differ between platforms. Use a fixed-width type such as 'Word32' or
+'Word64' instead.
+-}
+instance
+    ( AntiInstance
+        ( 'Text
+            "ByteFoldable for Word cannot exist: Word is platform-dependent; use Word32 or Word64 instead."
+        )
+    ) =>
+    ByteFoldable Word
+#if !MIN_VERSION_base(4,19,0)
+    where
+    foldlBytes _ _ _ = error "ByteFoldable Word: unreachable"
+#endif
+
+{- | Anti-instance: 'Integer' is arbitrary-precision and has no fixed width,
+so it has no fixed byte encoding. Use a fixed-width integer type instead.
+-}
+instance
+    ( AntiInstance
+        ( 'Text
+            "ByteFoldable for Integer cannot exist: Integer is arbitrary-precision; use a fixed-width integer type instead."
+        )
+    ) =>
+    ByteFoldable Integer
+#if !MIN_VERSION_base(4,19,0)
+    where
+    foldlBytes _ _ _ = error "ByteFoldable Integer: unreachable"
+#endif
+
+{- | Anti-instance: 'Natural' is arbitrary-precision and has no fixed width,
+so it has no fixed byte encoding. Use a fixed-width unsigned integer type
+instead.
+-}
+instance
+    ( AntiInstance
+        ( 'Text
+            "ByteFoldable for Natural cannot exist: Natural is arbitrary-precision; use a fixed-width unsigned integer type instead."
+        )
+    ) =>
+    ByteFoldable Natural
+#if !MIN_VERSION_base(4,19,0)
+    where
+    foldlBytes _ _ _ = error "ByteFoldable Natural: unreachable"
+#endif
+
+{- | Anti-instance: 'IntPtr' is as wide as a machine word, so its byte encoding
+would differ between platforms. Convert it to a fixed-width type such as
+'Int32' or 'Int64' instead.
+-}
+instance
+    ( AntiInstance
+        ( 'Text
+            "ByteFoldable for IntPtr cannot exist: IntPtr is platform-dependent; use Int32 or Int64 instead."
+        )
+    ) =>
+    ByteFoldable IntPtr
+#if !MIN_VERSION_base(4,19,0)
+    where
+    foldlBytes _ _ _ = error "ByteFoldable IntPtr: unreachable"
+#endif
+
+{- | Anti-instance: 'WordPtr' is as wide as a machine word, so its byte encoding
+would differ between platforms. Convert it to a fixed-width type such as
+'Word32' or 'Word64' instead.
+-}
+instance
+    ( AntiInstance
+        ( 'Text
+            "ByteFoldable for WordPtr cannot exist: WordPtr is platform-dependent; use Word32 or Word64 instead."
+        )
+    ) =>
+    ByteFoldable WordPtr
+#if !MIN_VERSION_base(4,19,0)
+    where
+    foldlBytes _ _ _ = error "ByteFoldable WordPtr: unreachable"
+#endif
+
+{- | Anti-instance: 'Ptr' is as wide as a machine word, and a pointer value is
+not stable across processes. Convert it to a fixed-width type such as 'Word32'
+or 'Word64' instead.
+-}
+instance
+    ( AntiInstance
+        ( 'Text
+            "ByteFoldable for Ptr cannot exist: pointers are platform-dependent and not stable across processes; convert to Word32 or Word64 instead."
+        )
+    ) =>
+    ByteFoldable (Ptr a)
+#if !MIN_VERSION_base(4,19,0)
+    where
+    foldlBytes _ _ _ = error "ByteFoldable Ptr: unreachable"
+#endif
+
+{- | Anti-instance: 'FunPtr' is as wide as a machine word, and a function
+pointer value is not stable across processes. Convert it to a fixed-width type
+such as 'Word32' or 'Word64' instead.
+-}
+instance
+    ( AntiInstance
+        ( 'Text
+            "ByteFoldable for FunPtr cannot exist: function pointers are platform-dependent and not stable across processes; convert to Word32 or Word64 instead."
+        )
+    ) =>
+    ByteFoldable (FunPtr a)
+#if !MIN_VERSION_base(4,19,0)
+    where
+    foldlBytes _ _ _ = error "ByteFoldable FunPtr: unreachable"
+#endif
